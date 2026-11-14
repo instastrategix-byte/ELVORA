@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+/*
+ * ELVORA design tokens.
+ * Dark ("midnight") is the default; light ("ivory") via data-theme="light" or the OS setting.
+ * Contrast targets: body text >= 7:1, secondary text >= 4.5:1, accent text >= 4.5:1.
+ */
+:root {
+  --bg: #0b0b0d;
+  --surface: #131316;
+  --surface-2: #1b1b20;
+  --border: #2a2a31;
+  --fg: #f3efe6;
+  --muted: #a8a296;
+  --accent: #c9ab6c;
+  --accent-strong: #dcc08a;
+  --accent-fg: #15120c;
+  --danger: #f06b6f;
+  --success: #5fcf98;
+  --warning: #e5b65b;
+  --ring: #c9ab6c;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f7f3ea;
+  --surface: #fffdf8;
+  --surface-2: #f0eadf;
+  --border: #e0d7c6;
+  --fg: #17161a;
+  --muted: #625d55;
+  --accent: #7a5d24;
+  --accent-strong: #5f4718;
+  --accent-fg: #fffdf8;
+  --danger: #b4232b;
+  --success: #1e7a4c;
+  --warning: #8a5a00;
+  --ring: #7a5d24;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg: #f7f3ea;
+    --surface: #fffdf8;
+    --surface-2: #f0eadf;
+    --border: #e0d7c6;
+    --fg: #17161a;
+    --muted: #625d55;
+    --accent: #7a5d24;
+    --accent-strong: #5f4718;
+    --accent-fg: #fffdf8;
+    --danger: #b4232b;
+    --success: #1e7a4c;
+    --warning: #8a5a00;
+    --ring: #7a5d24;
+    color-scheme: light;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-cormorant), ui-serif, Georgia, serif;
+  --animate-fade-in: fade-in 0.4s ease-out both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@utility eyebrow {
+  @apply text-xs font-medium tracking-[0.22em] text-accent uppercase;
+}
+
+@utility display {
+  @apply font-display font-medium tracking-tight;
+}
+
+@utility container-page {
+  @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+}
+
+@utility prose-elvora {
+  @apply max-w-none space-y-4 text-[15px] leading-7 text-fg/90;
+
+  & h2 {
+    @apply display pt-6 text-2xl text-fg;
+  }
+  & h3 {
+    @apply pt-2 text-base font-semibold text-fg;
+  }
+  & ul {
+    @apply list-disc space-y-1 pl-5;
+  }
+  & a {
+    @apply text-accent underline underline-offset-4;
+  }
+}
