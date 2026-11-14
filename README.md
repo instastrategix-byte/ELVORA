@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ELVORA
 
 A membership-based, verified social network and luxury marketplace: trusted networking, private messaging,
@@ -97,3 +98,6 @@ The full frontend and backend are implemented and verified locally (lint, typech
 55 Playwright tests, production build). Integrations that need credentials — Supabase, Stripe, Razorpay, Resend,
 Google sign-in — are implemented but **not yet tested against live services**. See
 [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+=======
+# ELVORA
+>>>>>>> 3e8e141ed0c0fb556e863bb64694fcfd1e9b9346
