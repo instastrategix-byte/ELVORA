@@ -79,6 +79,14 @@ test.describe("access control", () => {
     expect(signOut.status()).toBe(403);
   });
 
+  test("public read APIs without path params respond (no 'Invalid path')", async ({ request }) => {
+    for (const path of ["/api/v1/membership", "/api/v1/listings", "/api/v1/members"]) {
+      const res = await request.get(path);
+      // 200 with Supabase configured; 503 when it is not. Never a validation failure.
+      expect([200, 503], `${path} → ${res.status()}`).toContain(res.status());
+    }
+  });
+
   test("health endpoint reports integration configuration without secrets", async ({ request }) => {
     const res = await request.get("/api/health");
     expect(res.ok()).toBe(true);

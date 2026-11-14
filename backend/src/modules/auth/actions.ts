@@ -46,6 +46,22 @@ export async function signInAction(_prev: AuthFormState, formData: FormData): Pr
   redirect(safeNextPath(parsed.data.next));
 }
 
+/** User-facing reason for a failed sign-up. Never reveals whether an account already exists. */
+function signUpErrorMessage(code: string | undefined, status: number | undefined): string {
+  switch (code) {
+    case "over_email_send_rate_limit":
+      return "We've sent too many confirmation emails recently. Please try again in an hour.";
+    case "email_address_not_authorized":
+      return "We can't send a confirmation email to this address yet. Please try again later or contact support.";
+    case "signup_disabled":
+    case "email_provider_disabled":
+      return "New sign-ups are closed right now.";
+  }
+  if (status === 429) return "Too many attempts. Please wait a moment and try again.";
+  if (status !== undefined && status >= 500) return "We couldn't send your confirmation email. Please try again in a few minutes.";
+  return "We couldn't create your account. Please check your details and try again.";
+}
+
 export async function signUpAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
   if (!isSupabaseConfigured()) return NOT_CONFIGURED;
   const raw = Object.fromEntries(formData);
@@ -64,13 +80,12 @@ export async function signUpAction(_prev: AuthFormState, formData: FormData): Pr
     },
   });
   if (error) {
-    logger.info("auth.sign_up_failed", { code: error.code });
+    logger.warn("auth.sign_up_failed", { code: error.code, status: error.status });
     if (error.code === "weak_password") return { status: "error", fieldErrors: { password: [error.message] }, values };
-    return {
-      status: "error",
-      message: error.status === 429 ? "Too many attempts. Please wait a moment and try again." : "We couldn't create your account. Please check your details and try again.",
-      values,
-    };
+    if (error.code === "email_address_invalid") {
+      return { status: "error", fieldErrors: { email: ["This email address can't be used. Please use a different one."] }, values };
+    }
+    return { status: "error", message: signUpErrorMessage(error.code, error.status), values };
   }
   // With email confirmation enabled there is no session until the link is followed.
   if (!data.session) redirect(`/verify-email?email=${encodeURIComponent(parsed.data.email)}`);

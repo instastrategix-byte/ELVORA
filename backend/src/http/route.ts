@@ -60,7 +60,10 @@ export function route<
   options: RouteOptions<P, Q, B> & { auth?: A },
   handler: (ctx: HandlerContext<P, Q, B, A>) => Promise<T | Response>,
 ) {
-  return async (request: Request, context: { params: Promise<Record<string, string | string[]>> }): Promise<Response> => {
+  return async (
+    request: Request,
+    context: { params?: Promise<Record<string, string | string[]> | undefined> },
+  ): Promise<Response> => {
     const started = Date.now();
     try {
       const method = request.method.toUpperCase();
@@ -89,7 +92,8 @@ export function route<
         }
       }
 
-      const params = parse(options.params ?? empty, await context.params, "Invalid path.");
+      // Routes without dynamic segments receive no params object.
+      const params = parse(options.params ?? empty, (await context?.params) ?? {}, "Invalid path.");
       const url = new URL(request.url);
       const query = parse(options.query ?? empty, Object.fromEntries(url.searchParams), "Invalid query.");
       let body: unknown = {};
