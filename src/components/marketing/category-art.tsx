@@ -1,41 +1,81 @@
 import { Anchor, Building, Car, Gem, Hotel, PartyPopper, Sailboat, Trees } from "lucide-react";
-import type { ListingCategory } from "@backend/modules/listings/schemas";
+import { CATEGORY_LABELS, type ListingCategory } from "@backend/modules/listings/schemas";
 import { cn } from "@/lib/utils";
 
-const ART: Record<ListingCategory, { icon: typeof Hotel; gradient: string }> = {
-  hotel: { icon: Hotel, gradient: "from-[#2a2418] via-[#141210] to-[#0d0c0b]" },
-  resort: { icon: Trees, gradient: "from-[#1c2622] via-[#111614] to-[#0b0d0c]" },
-  villa: { icon: Building, gradient: "from-[#2b2117] via-[#16120e] to-[#0d0b0a]" },
-  apartment: { icon: Gem, gradient: "from-[#1f1f28] via-[#131318] to-[#0b0b0e]" },
-  supercar: { icon: Car, gradient: "from-[#2a1a19] via-[#151010] to-[#0d0a0a]" },
-  yacht: { icon: Sailboat, gradient: "from-[#16212b] via-[#0f141a] to-[#0a0c0f]" },
-  event: { icon: PartyPopper, gradient: "from-[#26192a] via-[#141016] to-[#0c0a0d]" },
-  experience: { icon: Anchor, gradient: "from-[#232516] via-[#131410] to-[#0c0c0a]" },
+const ART: Record<ListingCategory, { icon: typeof Hotel; tint: string }> = {
+  hotel: { icon: Hotel, tint: "#3a2e1a" },
+  resort: { icon: Trees, tint: "#1d3029" },
+  villa: { icon: Building, tint: "#3b2a1a" },
+  apartment: { icon: Gem, tint: "#26263a" },
+  supercar: { icon: Car, tint: "#3a1f1d" },
+  yacht: { icon: Sailboat, tint: "#18293a" },
+  event: { icon: PartyPopper, tint: "#30203a" },
+  experience: { icon: Anchor, tint: "#2c2f1a" },
 };
 
 /**
- * Brand-safe placeholder art for listings without photography: an abstract gradient with a
- * fine line motif. Used as the graceful fallback for missing or failed images.
+ * Category imagery. Renders the photo when `src` is set; otherwise brand artwork: a deep tinted
+ * gradient, a fine gold line motif, an engraved category name and a small emblem. Also used as the
+ * graceful fallback for listings without photos.
  */
-export function CategoryArt({ category, className, label }: { category: ListingCategory; className?: string; label?: string }) {
-  const { icon: Icon, gradient } = ART[category];
+export function CategoryArt({
+  category,
+  className,
+  label,
+  src,
+  showName = false,
+}: {
+  category: ListingCategory;
+  className?: string;
+  label?: string;
+  src?: string | null;
+  showName?: boolean;
+}) {
+  const { icon: Icon, tint } = ART[category];
+  const a11y = { role: label ? "img" : undefined, "aria-label": label, "aria-hidden": label ? undefined : true } as const;
+
+  if (src) {
+    return (
+      <div {...a11y} className={cn("relative overflow-hidden bg-surface-2", className)}>
+        {/* Site-owned photography from /public; plain img keeps arbitrary aspect ratios simple. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={src} alt="" className="absolute inset-0 size-full object-cover" loading="lazy" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+      </div>
+    );
+  }
+
   return (
     <div
-      role={label ? "img" : undefined}
-      aria-label={label}
-      aria-hidden={label ? undefined : true}
-      className={cn("relative overflow-hidden bg-gradient-to-br", gradient, className)}
+      {...a11y}
+      className={cn("relative overflow-hidden", className)}
+      style={{
+        backgroundImage: `radial-gradient(120% 90% at 85% 10%, ${tint} 0%, #0d0c0b 62%), linear-gradient(160deg, ${tint}66, #08080a)`,
+      }}
     >
-      <svg className="absolute inset-0 size-full opacity-[0.12]" aria-hidden="true">
+      <svg className="absolute inset-0 size-full opacity-[0.16]" aria-hidden="true">
         <defs>
-          <pattern id={`lines-${category}`} width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
-            <line x1="0" y1="0" x2="0" y2="28" stroke="#c9ab6c" strokeWidth="0.6" />
+          <pattern id={`lines-${category}`} width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+            <line x1="0" y1="0" x2="0" y2="22" stroke="#c9a961" strokeWidth="0.5" />
           </pattern>
+          <radialGradient id={`fade-${category}`} cx="80%" cy="15%" r="90%">
+            <stop offset="0%" stopColor="white" stopOpacity="1" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
+          </radialGradient>
+          <mask id={`mask-${category}`}>
+            <rect width="100%" height="100%" fill={`url(#fade-${category})`} />
+          </mask>
         </defs>
-        <rect width="100%" height="100%" fill={`url(#lines-${category})`} />
+        <rect width="100%" height="100%" fill={`url(#lines-${category})`} mask={`url(#mask-${category})`} />
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <Icon className="size-10 text-[#c9ab6c]/70" strokeWidth={1.2} aria-hidden="true" />
+      <div className="absolute inset-3 rounded-[inherit] border border-[#c9a961]/15" aria-hidden="true" />
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+        <span className="flex size-14 items-center justify-center rounded-full border border-[#c9a961]/30 bg-black/20 backdrop-blur-sm">
+          <Icon className="size-6 text-[#e2c88f]" strokeWidth={1.2} aria-hidden="true" />
+        </span>
+        {showName ? (
+          <span className="font-display text-xl tracking-[0.18em] text-[#f0dcae]/80 uppercase">{CATEGORY_LABELS[category]}</span>
+        ) : null}
       </div>
     </div>
   );

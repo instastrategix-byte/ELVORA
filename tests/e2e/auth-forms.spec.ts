@@ -26,6 +26,24 @@ test.describe("auth forms", () => {
     await expect(page.getByRole("link", { name: "Create an account" })).toHaveAttribute("href", "/sign-up");
   });
 
+  test("email-code sign-in is offered alongside password sign-in", async ({ page }) => {
+    await page.goto("/sign-in");
+    await page.getByRole("tab", { name: "Email code" }).click();
+    await expect(page.getByRole("button", { name: "Email me a code" })).toBeVisible();
+    await page.getByRole("tab", { name: "Password" }).click();
+    await expect(page.getByLabel("Password")).toBeVisible();
+  });
+
+  test("email-code requests never reveal whether an account exists", async ({ page }) => {
+    test.skip(!process.env.E2E_SUPABASE, "needs Supabase Auth (E2E_SUPABASE=1)");
+    await page.goto("/sign-in");
+    await page.getByRole("tab", { name: "Email code" }).click();
+    await page.getByLabel("Email").fill("nobody-at-all@elvora.test");
+    await page.getByRole("button", { name: "Email me a code" }).click();
+    await expect(page.getByText(/If an account exists/)).toBeVisible();
+    await expect(page.getByLabel(/Code sent to/)).toBeVisible();
+  });
+
   test("invalid confirmation links explain what happened", async ({ page }) => {
     await page.goto("/sign-in?error=link");
     await expect(page.getByText("That link is invalid or has expired")).toBeVisible();

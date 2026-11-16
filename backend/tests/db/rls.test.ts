@@ -497,3 +497,106 @@ describe("advertising", () => {
     expect(served.rows).toHaveLength(1);
   });
 });
+
+describe("complimentary plan grants", () => {
+  const ADMIN = "00000000-0000-4000-8000-0000000000ad";
+  const IVY = "00000000-0000-4000-8000-000000000081";
+  let grantId = "";
+
+  beforeAll(async () => {
+    await createUser(db, { id: ADMIN, handle: "admin_user" });
+    await createUser(db, { id: IVY, handle: "ivy" });
+    await db.query(`insert into public.staff_roles (user_id, role) values ($1, 'admin')`, [ADMIN]);
+  });
+
+  it("only admins can grant (members and moderators cannot)", async () => {
+    for (const caller of [IVY, MOD]) {
+      await expect(
+        asUser(db, caller, (tx) => tx.query(`select public.grant_plan($1, 'advertiser', 30, 'self-service attempt')`, [IVY])),
+      ).rejects.toThrow(/forbidden/);
+    }
+    await expect(
+      asUser(db, IVY, (tx) =>
+        tx.query(`insert into public.plan_grants (user_id, plan_id, reason, expires_at) values ($1, 'advertiser', 'x', now() + interval '1 day')`, [IVY]),
+      ),
+    ).rejects.toThrow(/permission denied/);
+  });
+
+  it("an admin grant unlocks the plan's features, is private to the member, and notifies them", async () => {
+    expect(await features(IVY)).not.toContain("ads.manage");
+    const r = await asUser(db, ADMIN, (tx) =>
+      tx.query<{ id: string }>(`select public.grant_plan($1, 'advertiser', 30, 'Launch partner') as id`, [IVY]),
+    );
+    grantId = r.rows[0]!.id;
+    expect(await features(IVY)).toContain("ads.manage");
+
+    const own = await asUser(db, IVY, (tx) => tx.query(`select id from public.plan_grants`));
+    expect(own.rows).toHaveLength(1);
+    const other = await asUser(db, ALICE, (tx) => tx.query(`select id from public.plan_grants where user_id = $1`, [IVY]));
+    expect(other.rows).toHaveLength(0);
+
+    const n = await db.query(`select 1 from public.notifications where user_id = $1 and type = 'membership_update'`, [IVY]);
+    expect(n.rows).toHaveLength(1);
+    const audit = await db.query(`select 1 from public.audit_log where action = 'plan_grant.created' and entity_id = $1`, [IVY]);
+    expect(audit.rows).toHaveLength(1);
+  });
+
+  it("rejects free plans and out-of-range durations", async () => {
+    await expect(asUser(db, ADMIN, (tx) => tx.query(`select public.grant_plan($1, 'standard', 30, 'free plan')`, [IVY]))).rejects.toThrow(
+      /cannot be granted/,
+    );
+    await expect(asUser(db, ADMIN, (tx) => tx.query(`select public.grant_plan($1, 'premium', 0, 'zero days')`, [IVY]))).rejects.toThrow(
+      /between 1 and 366/,
+    );
+  });
+
+  it("revoking a grant removes the features immediately", async () => {
+    await asUser(db, ADMIN, (tx) => tx.query(`select public.revoke_plan_grant($1, 'ended early')`, [grantId]));
+    expect(await features(IVY)).not.toContain("ads.manage");
+    await expect(asUser(db, ADMIN, (tx) => tx.query(`select public.revoke_plan_grant($1)`, [grantId]))).rejects.toThrow(/not active/);
+  });
+});
+
+describe("member-state helpers do not leak through the API", () => {
+  const GIL = "00000000-0000-4000-8000-000000000071";
+  const HAL = "00000000-0000-4000-8000-000000000072";
+
+  beforeAll(async () => {
+    await createUser(db, { id: GIL, handle: "gil" });
+    await createUser(db, { id: HAL, handle: "hal" });
+    await db.query(`insert into public.connections (requester_id, addressee_id, status) values ($1, $2, 'accepted')`, [GIL, HAL]);
+    await db.query(
+      `insert into public.subscriptions (user_id, plan_id, provider, provider_subscription_id, status, current_period_end)
+       values ($1, 'premium', 'stripe', 'sub_test_gil', 'active', now() + interval '30 days')`,
+      [GIL],
+    );
+  });
+
+  const probe = (userId: string | null) =>
+    asUser(db, userId, async (tx) => {
+      const r = await tx.query<{ connected: boolean; paying: boolean; features: string[]; blocked: boolean }>(
+        `select public.are_connected($1, $2) as connected,
+                public.has_active_subscription($1) as paying,
+                public.user_features($1) as features,
+                public.is_blocked_between($1, $2) as blocked`,
+        [GIL, HAL],
+      );
+      return r.rows[0]!;
+    });
+
+  it("strangers and signed-out callers learn nothing about other members", async () => {
+    for (const caller of [null, ALICE]) {
+      expect(await probe(caller)).toMatchObject({ connected: false, paying: false, features: [] });
+    }
+  });
+
+  it("members still see their own state, and staff can inspect anyone", async () => {
+    for (const caller of [GIL, MOD]) {
+      const r = await probe(caller);
+      expect(r).toMatchObject({ connected: true, paying: true });
+      expect(r.features).toContain("luxury.inquire");
+    }
+    // HAL is a party to the connection but not the subscriber.
+    expect(await probe(HAL)).toMatchObject({ connected: true, paying: false, features: [] });
+  });
+});

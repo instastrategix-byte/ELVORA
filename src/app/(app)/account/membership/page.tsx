@@ -54,6 +54,17 @@ export default async function MembershipAccountPage({ searchParams }: { searchPa
             </div>
             <StatusBadge status="active" />
           </div>
+          {o.grants
+            .filter((g) => g.active)
+            .map((g) => (
+              <div key={g.id} className="flex items-center justify-between gap-4 p-5">
+                <div>
+                  <p className="font-medium">{planName(g.planId)}</p>
+                  <p className="text-sm text-muted">Complimentary access · ends {formatDate(g.expiresAt)} · no payment involved</p>
+                </div>
+                <StatusBadge status="active" label="Complimentary" />
+              </div>
+            ))}
           {live.map((s) => (
             <div key={s.id} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>

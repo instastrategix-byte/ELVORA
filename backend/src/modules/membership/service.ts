@@ -42,10 +42,11 @@ export async function listPlans(db: DbClient): Promise<Plan[]> {
 
 export async function getMembershipOverview(db: DbClient, viewer: Viewer): Promise<MembershipOverview> {
   const plans = await listPlans(db);
-  const [apps, verifs, subs, pays, deletion, ...eligibility] = await Promise.all([
+  const [apps, verifs, subs, grants, pays, deletion, ...eligibility] = await Promise.all([
     db.from("membership_applications").select("*").eq("user_id", viewer.id).order("created_at", { ascending: false }).limit(20),
     db.from("verifications").select("*").eq("user_id", viewer.id).order("created_at", { ascending: false }).limit(20),
     db.from("subscriptions").select("*").eq("user_id", viewer.id).order("created_at", { ascending: false }).limit(20),
+    db.from("plan_grants").select("id, plan_id, expires_at, revoked_at").eq("user_id", viewer.id).order("expires_at", { ascending: false }).limit(10),
     db.from("payments").select("*").eq("user_id", viewer.id).order("created_at", { ascending: false }).limit(24),
     db.from("account_deletion_requests").select("id").eq("user_id", viewer.id).in("status", ["pending", "processing"]).limit(1),
     ...plans.filter((p) => !p.isFree).map((p) => db.rpc("is_eligible_for_plan", { p_plan_id: p.id })),
@@ -78,6 +79,12 @@ export async function getMembershipOverview(db: DbClient, viewer: Viewer): Promi
       currentPeriodEnd: s.current_period_end,
       cancelAtPeriodEnd: s.cancel_at_period_end,
       createdAt: s.created_at,
+    })),
+    grants: unwrap(grants).map((g) => ({
+      id: g.id,
+      planId: g.plan_id,
+      expiresAt: g.expires_at,
+      active: !g.revoked_at && new Date(g.expires_at) > new Date(),
     })),
     payments: unwrap(pays).map((p) => ({
       id: p.id,

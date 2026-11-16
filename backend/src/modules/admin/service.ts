@@ -6,7 +6,8 @@ import { getSummaries } from "@backend/modules/profiles/service";
 import type { ProfileSummary } from "@backend/modules/profiles/types";
 import { signedUrls } from "@backend/modules/storage/service";
 import { unwrap } from "@backend/http/db-errors";
-import type { moderationSchema } from "./schemas";
+import { AppError } from "@/lib/errors";
+import type { moderationSchema, planGrantSchema } from "./schemas";
 
 /*
  * All staff operations run as the signed-in staff member (not the service role). The SQL
@@ -182,4 +183,55 @@ export async function moderate(db: DbClient, input: z.infer<typeof moderationSch
 
 export async function dismissReport(db: DbClient, id: string, note?: string) {
   unwrap(await db.rpc("dismiss_report", { p_id: id, p_note: note }));
+}
+
+export type PlanGrantItem = {
+  id: string;
+  planId: string;
+  reason: string;
+  createdAt: string;
+  expiresAt: string;
+  revokedAt: string | null;
+  active: boolean;
+  member: ProfileSummary;
+  grantedBy: ProfileSummary | null;
+};
+
+/** Active grants first, then the most recent ended/revoked ones. */
+export async function listPlanGrants(db: DbClient, limit = QUEUE_LIMIT): Promise<PlanGrantItem[]> {
+  const rows = unwrap(
+    await db
+      .from("plan_grants")
+      .select("id, user_id, plan_id, reason, granted_by, created_at, expires_at, revoked_at")
+      .order("created_at", { ascending: false })
+      .limit(limit),
+  );
+  const people = await getSummaries(db, rows.flatMap((r) => [r.user_id, ...(r.granted_by ? [r.granted_by] : [])]));
+  const now = Date.now();
+  const isActive = (r: (typeof rows)[number]) => !r.revoked_at && new Date(r.expires_at).getTime() > now;
+  return rows
+    .filter((r) => people.has(r.user_id))
+    .sort((a, b) => Number(isActive(b)) - Number(isActive(a)))
+    .map((r) => ({
+      id: r.id,
+      planId: r.plan_id,
+      reason: r.reason,
+      createdAt: r.created_at,
+      expiresAt: r.expires_at,
+      revokedAt: r.revoked_at,
+      active: isActive(r),
+      member: people.get(r.user_id)!,
+      grantedBy: r.granted_by ? (people.get(r.granted_by) ?? null) : null,
+    }));
+}
+
+export async function grantPlan(db: DbClient, input: z.infer<typeof planGrantSchema>): Promise<{ id: string }> {
+  const member = unwrap(await db.from("profiles").select("id").eq("handle", input.handle).maybeSingle());
+  if (!member) throw new AppError("not_found", `No member with the handle @${input.handle}.`, { handle: ["Member not found"] });
+  const id = unwrap(await db.rpc("grant_plan", { p_user: member.id, p_plan_id: input.planId, p_days: input.days, p_reason: input.reason }));
+  return { id };
+}
+
+export async function revokePlanGrant(db: DbClient, id: string, reason?: string) {
+  unwrap(await db.rpc("revoke_plan_grant", { p_id: id, p_reason: reason }));
 }

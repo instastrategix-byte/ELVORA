@@ -17,7 +17,7 @@ export const PUBLIC_NAV = [
 /** Static shell; the session-dependent actions stream in behind Suspense. */
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-bg/85 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-border/60 bg-bg/70 backdrop-blur-xl backdrop-saturate-150 after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-gradient-to-r after:from-transparent after:via-accent/30 after:to-transparent">
       <div className="container-page flex h-16 items-center gap-6">
         <Logo />
         <nav aria-label="Primary" className="hidden flex-1 items-center gap-1 md:flex">

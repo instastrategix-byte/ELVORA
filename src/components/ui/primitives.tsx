@@ -3,7 +3,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn, initials } from "@/lib/utils";
 
 export function Card({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("rounded-2xl border border-border bg-surface", className)} {...props} />;
+  return <div className={cn("panel", className)} {...props} />;
 }
 
 const badgeTones = {
@@ -83,8 +83,18 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center rounded-2xl border border-dashed border-border px-6 py-14 text-center", className)}>
-      {icon ? <div className="mb-4 text-accent [&_svg]:size-7">{icon}</div> : null}
+    <div
+      className={cn(
+        "relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-border bg-surface/50 px-6 py-16 text-center",
+        "bg-[radial-gradient(50%_60%_at_50%_0%,var(--glow),transparent_70%)]",
+        className,
+      )}
+    >
+      {icon ? (
+        <div className="mb-5 flex size-14 items-center justify-center rounded-full border border-accent/30 bg-bg/60 text-accent shadow-[0_0_30px_-8px_var(--glow)] [&_svg]:size-6">
+          {icon}
+        </div>
+      ) : null}
       <h3 className="display text-2xl">{title}</h3>
       {description ? <p className="mt-2 max-w-md text-sm text-muted">{description}</p> : null}
       {action ? <div className="mt-6">{action}</div> : null}

@@ -56,11 +56,12 @@ export function NavLinks({ pathname, showAdmin }: { pathname: string; showAdmin?
           href={href}
           aria-current={isActive(pathname, href) ? "page" : undefined}
           className={cn(
-            "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-fg",
-            "aria-[current=page]:bg-surface-2 aria-[current=page]:text-fg",
+            "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-fg",
+            "aria-[current=page]:bg-gradient-to-r aria-[current=page]:from-accent/12 aria-[current=page]:to-transparent aria-[current=page]:text-fg",
+            "before:absolute before:top-2 before:bottom-2 before:left-0 before:w-0.5 before:rounded-full before:bg-gold before:opacity-0 aria-[current=page]:before:opacity-100",
           )}
         >
-          <Icon className="size-[18px] shrink-0" aria-hidden="true" />
+          <Icon className="size-[18px] shrink-0 transition-colors group-aria-[current=page]:text-accent" aria-hidden="true" />
           {label}
         </Link>
       ))}

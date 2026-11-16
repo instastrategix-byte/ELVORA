@@ -60,11 +60,20 @@ export type PaymentView = {
   createdAt: string;
 };
 
+/** Complimentary access granted by an admin — never a payment or subscription. */
+export type PlanGrantView = {
+  id: string;
+  planId: string;
+  expiresAt: string;
+  active: boolean;
+};
+
 export type MembershipOverview = {
   plans: Plan[];
   applications: ApplicationView[];
   verifications: VerificationView[];
   subscriptions: SubscriptionView[];
+  grants: PlanGrantView[];
   payments: PaymentView[];
   eligiblePlanIds: string[];
   pendingDeletion: boolean;

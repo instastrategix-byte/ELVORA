@@ -1,6 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { io } from "next/cache";
 import { cookies } from "next/headers";
 import { AppError } from "@/lib/errors";
 import { publicEnv } from "@/lib/env";
@@ -18,6 +19,9 @@ export async function createClient(): Promise<DbClient> {
     throw new AppError("service_unavailable", "The ELVORA data service is not configured.");
   }
   const cookieStore = await cookies();
+  // Supabase reads the clock (token expiry). Runtime prefetches render with cookies, so mark
+  // the client as IO to keep its results out of the prerender (no-op during real requests).
+  await io();
   return createServerClient<Database>(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
     cookies: {
       getAll() {

@@ -28,6 +28,17 @@ export const signUpSchema = z.object({
 
 export const forgotPasswordSchema = z.object({ email: emailSchema });
 
+/** Passwordless sign-in: step 1 emails a one-time code, step 2 verifies it. */
+export const otpRequestSchema = z.object({ email: emailSchema, next: z.string().max(500).optional() });
+export const otpVerifySchema = z.object({
+  email: emailSchema,
+  token: z
+    .string()
+    .trim()
+    .regex(/^\d{6,10}$/, { error: "Enter the code from your email" }),
+  next: z.string().max(500).optional(),
+});
+
 export const resetPasswordSchema = z
   .object({ password: passwordSchema, confirm: z.string() })
   .refine((v) => v.password === v.confirm, { error: "Passwords do not match", path: ["confirm"] });

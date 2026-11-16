@@ -871,6 +871,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      plan_grants: {
+        Row: {
+          id: string;
+          user_id: string;
+          plan_id: string;
+          reason: string;
+          granted_by: string | null;
+          starts_at: string;
+          expires_at: string;
+          revoked_at: string | null;
+          revoked_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          plan_id: string;
+          reason: string;
+          granted_by?: string | null;
+          starts_at?: string;
+          expires_at: string;
+          revoked_at?: string | null;
+          revoked_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          plan_id?: string;
+          reason?: string;
+          granted_by?: string | null;
+          starts_at?: string;
+          expires_at?: string;
+          revoked_at?: string | null;
+          revoked_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       plan_prices: {
         Row: {
           id: string;
@@ -1347,6 +1386,10 @@ export type Database = {
         Args: { p_other: string };
         Returns: boolean;
       };
+      can_read_member_state: {
+        Args: { p_user: string };
+        Returns: boolean;
+      };
       can_view_listing: {
         Args: { p_business: string; p_status: Database["public"]["Enums"]["listing_status"]; p_visibility: Database["public"]["Enums"]["listing_visibility"] };
         Returns: boolean;
@@ -1386,6 +1429,10 @@ export type Database = {
       dismiss_report: {
         Args: { p_id: string; p_note?: string };
         Returns: undefined;
+      };
+      grant_plan: {
+        Args: { p_user: string; p_plan_id: string; p_days: number; p_reason: string };
+        Returns: string;
       };
       grant_staff_role: {
         Args: { p_user: string; p_role: Database["public"]["Enums"]["staff_role"] };
@@ -1469,6 +1516,10 @@ export type Database = {
       };
       review_listing: {
         Args: { p_id: string; p_approve: boolean; p_note?: string };
+        Returns: undefined;
+      };
+      revoke_plan_grant: {
+        Args: { p_id: string; p_reason?: string };
         Returns: undefined;
       };
       revoke_staff_role: {

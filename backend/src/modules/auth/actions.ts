@@ -6,7 +6,7 @@ import { isSupabaseConfigured, siteUrl } from "@/lib/env";
 import { safeNextPath } from "@/lib/routes";
 import { createClient } from "@backend/db/server";
 import { logger } from "@backend/core/logger";
-import { forgotPasswordSchema, resetPasswordSchema, signInSchema, signUpSchema } from "./schemas";
+import { forgotPasswordSchema, otpRequestSchema, otpVerifySchema, resetPasswordSchema, signInSchema, signUpSchema } from "./schemas";
 
 export type AuthFormState = {
   status: "idle" | "error" | "success";
@@ -41,6 +41,55 @@ export async function signInAction(_prev: AuthFormState, formData: FormData): Pr
       status: "error",
       message: error.status === 429 ? "Too many attempts. Please wait a moment and try again." : "The email or password is incorrect.",
       values: { email },
+    };
+  }
+  redirect(safeNextPath(parsed.data.next));
+}
+
+/**
+ * Passwordless sign-in, step 1: email a one-time code to an existing account. The response is the
+ * same whether or not the address is registered (no account enumeration), and no account is created.
+ */
+export async function requestOtpAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  if (!isSupabaseConfigured()) return NOT_CONFIGURED;
+  const email = String(formData.get("email") ?? "");
+  const parsed = otpRequestSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { status: "error", fieldErrors: fieldErrors(parsed.error), values: { email } };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithOtp({ email: parsed.data.email, options: { shouldCreateUser: false } });
+  if (error && (error.status === 429 || error.code === "over_email_send_rate_limit")) {
+    return { status: "error", message: "Too many codes requested. Please wait a few minutes and try again.", values: { email } };
+  }
+  if (error && (error.status ?? 500) >= 500) {
+    logger.warn("auth.otp_send_failed", { code: error.code, status: error.status });
+    return { status: "error", message: "We couldn't send a code right now. Please try again shortly.", values: { email } };
+  }
+  // Unknown addresses (otp_disabled / user_not_found) get the same answer as real ones.
+  return {
+    status: "success",
+    message: "If an account exists for that email, we've sent a sign-in code. It expires in one hour.",
+    values: { email: parsed.data.email },
+  };
+}
+
+/** Passwordless sign-in, step 2: verify the code and start a session. */
+export async function verifyOtpAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  if (!isSupabaseConfigured()) return NOT_CONFIGURED;
+  const email = String(formData.get("email") ?? "");
+  const parsed = otpVerifySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { status: "error", fieldErrors: fieldErrors(parsed.error), values: { email } };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({ email: parsed.data.email, token: parsed.data.token, type: "email" });
+  if (error) {
+    logger.info("auth.otp_verify_failed", { code: error.code });
+    return {
+      status: "error",
+      fieldErrors: {
+        token: [error.status === 429 ? "Too many attempts. Please wait a moment." : "That code is incorrect or has expired."],
+      },
+      values: { email: parsed.data.email },
     };
   }
   redirect(safeNextPath(parsed.data.next));

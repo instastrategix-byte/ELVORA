@@ -110,10 +110,13 @@ export async function asUser<T>(db: PGlite, userId: string | null, fn: (tx: PGli
   const role = userId ? "authenticated" : "anon";
   await db.exec(`set role ${role}`);
   await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [userId ?? ""]);
+  // PostgREST also exposes the JWT claims; helpers use the role to tell API calls from internal ones.
+  await db.query(`select set_config('request.jwt.claims', $1, false)`, [JSON.stringify({ role, sub: userId ?? undefined })]);
   try {
     return await fn(db);
   } finally {
     await db.exec(`reset role`);
     await db.query(`select set_config('request.jwt.claim.sub', '', false)`);
+    await db.query(`select set_config('request.jwt.claims', '', false)`);
   }
 }

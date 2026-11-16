@@ -7,10 +7,12 @@ import { Checkbox, Field, Input } from "@/components/ui/form";
 import { Alert } from "@/components/ui/primitives";
 import {
   forgotPasswordAction,
+  requestOtpAction,
   resendVerificationAction,
   resetPasswordAction,
   signInAction,
   signUpAction,
+  verifyOtpAction,
   type AuthFormState,
 } from "@backend/modules/auth/actions";
 import { PASSWORD_RULES } from "@backend/modules/auth/schemas";
@@ -24,10 +26,38 @@ function FormAlert({ state }: { state: AuthFormState }) {
 }
 
 export function SignInForm({ next, googleEnabled }: { next?: string; googleEnabled: boolean }) {
-  const [state, action, pending] = useActionState(signInAction, initial);
+  const [method, setMethod] = useState<"password" | "code">("password");
   return (
     <div className="space-y-5">
       {googleEnabled ? <GoogleButton next={next} /> : null}
+      <div role="tablist" aria-label="Sign-in method" className="grid grid-cols-2 gap-1 rounded-full border border-border bg-surface p-1 text-sm">
+        {(
+          [
+            ["password", "Password"],
+            ["code", "Email code"],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={method === value}
+            onClick={() => setMethod(value)}
+            className="rounded-full px-3 py-2 text-muted transition-colors aria-selected:bg-gold aria-selected:font-medium aria-selected:text-accent-fg"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {method === "password" ? <PasswordSignIn next={next} /> : <CodeSignIn next={next} />}
+    </div>
+  );
+}
+
+function PasswordSignIn({ next }: { next?: string }) {
+  const [state, action, pending] = useActionState(signInAction, initial);
+  return (
+    <div role="tabpanel">
       <form action={action} className="space-y-4" noValidate>
         <FormAlert state={state} />
         <input type="hidden" name="next" value={next ?? ""} />
@@ -45,6 +75,63 @@ export function SignInForm({ next, googleEnabled }: { next?: string; googleEnabl
         <Button type="submit" size="lg" className="w-full" disabled={pending}>
           {pending ? "Signing in…" : "Sign in"}
         </Button>
+      </form>
+    </div>
+  );
+}
+
+/** Passwordless: request a one-time code by email, then enter it. */
+function CodeSignIn({ next }: { next?: string }) {
+  const [requested, request, requesting] = useActionState(requestOtpAction, initial);
+  const [verified, verify, verifying] = useActionState(verifyOtpAction, initial);
+  const sentTo = requested.status === "success" ? requested.values?.email : undefined;
+
+  if (!sentTo) {
+    return (
+      <form role="tabpanel" action={request} className="space-y-4" noValidate>
+        <FormAlert state={requested} />
+        <input type="hidden" name="next" value={next ?? ""} />
+        <Field id="otp-email" label="Email" error={requested.fieldErrors?.email} hint="We'll email you a one-time code — no password needed.">
+          {(aria) => <Input name="email" type="email" autoComplete="email" required defaultValue={requested.values?.email} {...aria} />}
+        </Field>
+        <Button type="submit" size="lg" className="w-full" disabled={requesting}>
+          {requesting ? "Sending code…" : "Email me a code"}
+        </Button>
+      </form>
+    );
+  }
+
+  return (
+    <div role="tabpanel" className="space-y-4">
+      <Alert tone="success">{requested.message}</Alert>
+      <form action={verify} className="space-y-4" noValidate>
+        <input type="hidden" name="email" value={sentTo} />
+        <input type="hidden" name="next" value={next ?? ""} />
+        <Field id="otp-token" label={`Code sent to ${sentTo}`} error={verified.fieldErrors?.token}>
+          {(aria) => (
+            <Input
+              name="token"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9]*"
+              maxLength={10}
+              required
+              autoFocus
+              className="text-center font-mono text-2xl tracking-[0.5em]"
+              {...aria}
+            />
+          )}
+        </Field>
+        <Button type="submit" size="lg" className="w-full" disabled={verifying}>
+          {verifying ? "Verifying…" : "Sign in"}
+        </Button>
+      </form>
+      <form action={request} className="text-center">
+        <input type="hidden" name="email" value={sentTo} />
+        <input type="hidden" name="next" value={next ?? ""} />
+        <button type="submit" disabled={requesting} className="text-sm text-accent hover:underline disabled:opacity-50">
+          {requesting ? "Sending…" : "Send a new code"}
+        </button>
       </form>
     </div>
   );
