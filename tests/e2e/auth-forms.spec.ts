@@ -44,6 +44,12 @@ test.describe("auth forms", () => {
     await expect(page.getByLabel(/Code sent to/)).toBeVisible();
   });
 
+  test("auth codes that land on the home page are handed to the callback", async ({ request }) => {
+    const res = await request.get("/?code=not-a-real-code", { maxRedirects: 0 });
+    expect(res.status()).toBe(307);
+    expect(res.headers()["location"]).toMatch(/\/auth\/callback\?code=not-a-real-code$/);
+  });
+
   test("invalid confirmation links explain what happened", async ({ page }) => {
     await page.goto("/sign-in?error=link");
     await expect(page.getByText("That link is invalid or has expired")).toBeVisible();

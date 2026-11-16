@@ -57,7 +57,14 @@ export async function requestOtpAction(_prev: AuthFormState, formData: FormData)
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrors(parsed.error), values: { email } };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithOtp({ email: parsed.data.email, options: { shouldCreateUser: false } });
+  const { error } = await supabase.auth.signInWithOtp({
+    email: parsed.data.email,
+    options: {
+      shouldCreateUser: false,
+      // Used only if the email template shows a link instead of the code.
+      emailRedirectTo: siteUrl(`/auth/callback?next=${encodeURIComponent(safeNextPath(parsed.data.next))}`),
+    },
+  });
   if (error && (error.status === 429 || error.code === "over_email_send_rate_limit")) {
     return { status: "error", message: "Too many codes requested. Please wait a few minutes and try again.", values: { email } };
   }

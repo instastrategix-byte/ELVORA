@@ -9,7 +9,7 @@ test.describe("public experience", () => {
       await expect(page.getByRole("heading", { name: pillar })).toBeVisible();
     }
     await expect(page.getByRole("link", { name: /Apply for membership/ })).toHaveAttribute("href", "/apply");
-    await expect(page.getByRole("link", { name: "Explore luxury listings" })).toHaveAttribute("href", "/luxury");
+    await expect(page.getByRole("link", { name: "Explore the marketplace" })).toHaveAttribute("href", "/luxury");
   });
 
   for (const [path, heading] of [
