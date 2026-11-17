@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Account restricted" };
 export default async function RestrictedPage() {
   const session = await getSession().catch(() => null);
   if (!session) redirect("/sign-in");
-  if (session.viewer.accountStatus === "active") redirect("/feed");
+  if (session.viewer.accountStatus === "active") redirect("/home");
   return (
     <div className="space-y-6 text-center">
       <ShieldAlert className="mx-auto size-10 text-warning" aria-hidden="true" />

@@ -388,6 +388,111 @@ export type Database = {
         };
         Relationships: [];
       };
+      event_private_details: {
+        Row: { event_id: string; online_url: string | null; updated_at: string };
+        Insert: { event_id: string; online_url?: string | null; updated_at?: string };
+        Update: { event_id?: string; online_url?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      event_rsvps: {
+        Row: {
+          event_id: string;
+          user_id: string;
+          status: Database["public"]["Enums"]["rsvp_status"];
+          note: string | null;
+          invited_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          event_id: string;
+          user_id: string;
+          status: Database["public"]["Enums"]["rsvp_status"];
+          note?: string | null;
+          invited_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          event_id?: string;
+          user_id?: string;
+          status?: Database["public"]["Enums"]["rsvp_status"];
+          note?: string | null;
+          invited_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      events: {
+        Row: {
+          id: string;
+          host_id: string;
+          business_id: string | null;
+          title: string;
+          summary: string | null;
+          description: string | null;
+          format: Database["public"]["Enums"]["event_format"];
+          venue_name: string | null;
+          city: string | null;
+          country: string | null;
+          starts_at: string;
+          ends_at: string;
+          capacity: number | null;
+          visibility: Database["public"]["Enums"]["event_visibility"];
+          status: Database["public"]["Enums"]["event_status"];
+          cover_path: string | null;
+          published_at: string | null;
+          cancelled_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          host_id: string;
+          business_id?: string | null;
+          title: string;
+          summary?: string | null;
+          description?: string | null;
+          format?: Database["public"]["Enums"]["event_format"];
+          venue_name?: string | null;
+          city?: string | null;
+          country?: string | null;
+          starts_at: string;
+          ends_at: string;
+          capacity?: number | null;
+          visibility?: Database["public"]["Enums"]["event_visibility"];
+          status?: Database["public"]["Enums"]["event_status"];
+          cover_path?: string | null;
+          published_at?: string | null;
+          cancelled_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          host_id?: string;
+          business_id?: string | null;
+          title?: string;
+          summary?: string | null;
+          description?: string | null;
+          format?: Database["public"]["Enums"]["event_format"];
+          venue_name?: string | null;
+          city?: string | null;
+          country?: string | null;
+          starts_at?: string;
+          ends_at?: string;
+          capacity?: number | null;
+          visibility?: Database["public"]["Enums"]["event_visibility"];
+          status?: Database["public"]["Enums"]["event_status"];
+          cover_path?: string | null;
+          published_at?: string | null;
+          cancelled_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       follows: {
         Row: {
           follower_id: string;
@@ -1096,6 +1201,13 @@ export type Database = {
           verified_kinds: Database["public"]["Enums"]["verification_kind"][];
           account_status: Database["public"]["Enums"]["account_status"];
           onboarding_completed_at: string | null;
+          member_type: Database["public"]["Enums"]["member_type"] | null;
+          skills: string[];
+          open_to: string[];
+          achievements: string[];
+          linkedin_url: string | null;
+          x_url: string | null;
+          instagram_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -1103,6 +1215,13 @@ export type Database = {
           id: string;
           handle: string;
           display_name: string;
+          member_type?: Database["public"]["Enums"]["member_type"] | null;
+          skills?: string[];
+          open_to?: string[];
+          achievements?: string[];
+          linkedin_url?: string | null;
+          x_url?: string | null;
+          instagram_url?: string | null;
           headline?: string | null;
           bio?: string | null;
           job_title?: string | null;
@@ -1126,6 +1245,13 @@ export type Database = {
           id?: string;
           handle?: string;
           display_name?: string;
+          member_type?: Database["public"]["Enums"]["member_type"] | null;
+          skills?: string[];
+          open_to?: string[];
+          achievements?: string[];
+          linkedin_url?: string | null;
+          x_url?: string | null;
+          instagram_url?: string | null;
           headline?: string | null;
           bio?: string | null;
           job_title?: string | null;
@@ -1144,6 +1270,45 @@ export type Database = {
           onboarding_completed_at?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      profile_experiences: {
+        Row: {
+          id: string;
+          profile_id: string;
+          title: string;
+          company: string;
+          location: string | null;
+          starts_on: string;
+          ends_on: string | null;
+          description: string | null;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          title: string;
+          company: string;
+          location?: string | null;
+          starts_on: string;
+          ends_on?: string | null;
+          description?: string | null;
+          position?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          title?: string;
+          company?: string;
+          location?: string | null;
+          starts_on?: string;
+          ends_on?: string | null;
+          description?: string | null;
+          position?: number;
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -1434,6 +1599,18 @@ export type Database = {
         Args: { p_user: string; p_plan_id: string; p_days: number; p_reason: string };
         Returns: string;
       };
+      can_host_events: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      event_stats: {
+        Args: { p_events: string[] };
+        Returns: { event_id: string; going_count: number; waitlist_count: number; interested_count: number }[];
+      };
+      invite_to_event: {
+        Args: { p_event: string; p_user: string };
+        Returns: undefined;
+      };
       grant_staff_role: {
         Args: { p_user: string; p_role: Database["public"]["Enums"]["staff_role"] };
         Returns: undefined;
@@ -1580,6 +1757,11 @@ export type Database = {
       connection_status: "pending" | "accepted" | "declined";
       content_status: "published" | "hidden" | "removed";
       deletion_status: "pending" | "processing" | "completed" | "cancelled";
+      event_format: "in_person" | "virtual" | "hybrid";
+      event_status: "draft" | "published" | "cancelled";
+      event_visibility: "members" | "invite_only";
+      rsvp_status: "invited" | "interested" | "going" | "waitlisted" | "cancelled";
+      member_type: "founder" | "executive" | "investor" | "professional" | "public_figure" | "creative" | "business";
       inquiry_status: "new" | "responded" | "closed";
       listing_category: "hotel" | "resort" | "villa" | "apartment" | "supercar" | "yacht" | "event" | "experience";
       listing_status: "draft" | "pending_review" | "published" | "rejected" | "archived" | "removed";
@@ -1587,7 +1769,7 @@ export type Database = {
       media_type: "image" | "video";
       messaging_policy: "connections" | "members" | "nobody";
       moderation_action_type: "hide_content" | "remove_content" | "restore_content" | "warn" | "suspend" | "reinstate";
-      notification_type: "connection_request" | "connection_accepted" | "new_follower" | "post_liked" | "post_commented" | "message" | "membership_update" | "application_update" | "verification_update" | "moderation_notice" | "listing_inquiry" | "business_update" | "campaign_update";
+      notification_type: "connection_request" | "connection_accepted" | "new_follower" | "post_liked" | "post_commented" | "message" | "membership_update" | "application_update" | "verification_update" | "moderation_notice" | "listing_inquiry" | "business_update" | "campaign_update" | "event_update";
       payment_provider: "stripe" | "razorpay";
       payment_status: "pending" | "paid" | "failed" | "refunded";
       plan_audience: "individual" | "premium" | "professional" | "business" | "advertiser";

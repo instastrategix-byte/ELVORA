@@ -54,7 +54,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         ))}
       </ul>
       <Button asChild size="lg">
-        <Link href={next ?? "/feed"}>
+        <Link href={next ?? "/home"}>
           {next ? "Continue" : <><Home /> Go to my feed</>} <ArrowRight />
         </Link>
       </Button>

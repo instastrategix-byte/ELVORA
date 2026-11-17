@@ -10,7 +10,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   const { viewer } = await requirePageSession({ onboarded: false, next: "/onboarding" });
   const sp = await searchParams;
   const next = typeof sp.next === "string" ? safeNextPath(sp.next) : undefined;
-  if (viewer.onboarded) redirect(next ?? "/feed");
+  if (viewer.onboarded) redirect(next ?? "/home");
 
   return (
     <div className="space-y-10">

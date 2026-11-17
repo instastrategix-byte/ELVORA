@@ -16,9 +16,9 @@ afterEach(() => vi.unstubAllGlobals());
 describe("routing safety", () => {
   it("only allows same-origin relative redirects", () => {
     expect(safeNextPath("/feed?x=1")).toBe("/feed?x=1");
-    expect(safeNextPath("//evil.example")).toBe("/feed");
-    expect(safeNextPath("https://evil.example")).toBe("/feed");
-    expect(safeNextPath("/\\evil.example")).toBe("/feed");
+    expect(safeNextPath("//evil.example")).toBe("/home");
+    expect(safeNextPath("https://evil.example")).toBe("/home");
+    expect(safeNextPath("/\\evil.example")).toBe("/home");
     expect(safeNextPath(undefined, "/onboarding")).toBe("/onboarding");
   });
 

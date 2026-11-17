@@ -32,8 +32,8 @@ export function UserMenu({
         {onboarded ? (
           <>
             <MenuItem asChild>
-              <Link href="/feed">
-                <LayoutDashboard /> Home feed
+              <Link href="/home">
+                <LayoutDashboard /> Dashboard
               </Link>
             </MenuItem>
             <MenuItem asChild>

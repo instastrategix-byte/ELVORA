@@ -1,4 +1,4 @@
-import { Briefcase, Globe, Lock, MapPin, Pencil } from "lucide-react";
+import { Award, AtSign, Briefcase, Camera, Globe, Link2, Lock, MapPin, Pencil, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,7 +7,8 @@ import { ServiceNotice } from "@/components/feedback/service-notice";
 import { PostList } from "@/components/feed/post-list";
 import { ProfileActions } from "@/components/social/profile-actions";
 import { Button } from "@/components/ui/button";
-import { Alert, Avatar, Badge, Skeleton } from "@/components/ui/primitives";
+import { experienceRange } from "@/components/profile/experience-format";
+import { Alert, Avatar, Badge, Card, Skeleton } from "@/components/ui/primitives";
 import { VerifiedBadges } from "@/components/ui/verified-badge";
 import { attempt } from "@/lib/attempt";
 import { formatDate, titleCase } from "@/lib/format";
@@ -15,6 +16,7 @@ import { createClient } from "@backend/db/server";
 import { hasFeature } from "@backend/modules/auth/permissions";
 import { listAuthorPosts } from "@backend/modules/feed/service";
 import { getProfileByHandle, getRelationship } from "@backend/modules/profiles/service";
+import { MEMBER_TYPE_LABELS, OPEN_TO_LABELS, type ProfileDetail } from "@backend/modules/profiles/types";
 import { getSession } from "@backend/auth/viewer";
 
 type Params = Promise<{ handle: string }>;
@@ -110,53 +112,124 @@ async function Profile({ params }: { params: Params }) {
         </div>
 
         <div className="mt-6 grid gap-10 lg:grid-cols-[1fr_1.6fr]">
-          <section aria-label="About" className="space-y-5">
-            <div>
-              <h1 className="display flex flex-wrap items-center gap-2 text-4xl">{profile.displayName}</h1>
-              <p className="text-sm text-muted">@{profile.handle}</p>
-              <div className="mt-2">
-                <VerifiedBadges kinds={profile.verifiedKinds} business={profile.hasApprovedBusiness} />
+          <div className="space-y-5">
+            <section aria-label="Profile summary" className="space-y-4">
+              <div>
+                {profile.memberType ? <p className="eyebrow">{MEMBER_TYPE_LABELS[profile.memberType]}</p> : null}
+                <h1 className="display mt-1 flex flex-wrap items-center gap-2 text-4xl">{profile.displayName}</h1>
+                <p className="text-sm text-muted">@{profile.handle}</p>
+                <div className="mt-2">
+                  <VerifiedBadges kinds={profile.verifiedKinds} business={profile.hasApprovedBusiness} />
+                </div>
               </div>
-            </div>
-            {profile.headline ? <p className="text-lg">{profile.headline}</p> : null}
-            <ul className="space-y-2 text-sm text-muted">
-              {profile.jobTitle || profile.company ? (
-                <li className="flex items-center gap-2">
-                  <Briefcase className="size-4" aria-hidden="true" /> {[profile.jobTitle, profile.company].filter(Boolean).join(" · ")}
-                </li>
+              {profile.headline ? <p className="text-lg">{profile.headline}</p> : null}
+              <ul className="space-y-2 text-sm text-muted">
+                {profile.jobTitle || profile.company ? (
+                  <li className="flex items-center gap-2">
+                    <Briefcase className="size-4" aria-hidden="true" /> {[profile.jobTitle, profile.company].filter(Boolean).join(" · ")}
+                  </li>
+                ) : null}
+                {profile.location ? (
+                  <li className="flex items-center gap-2">
+                    <MapPin className="size-4" aria-hidden="true" /> {profile.location}
+                  </li>
+                ) : null}
+                <li>Member since {formatDate(profile.memberSince)}</li>
+              </ul>
+              <SocialLinks links={profile.socialLinks} />
+              {isSelf ? (
+                <p className="flex items-center gap-1.5 text-xs text-muted">
+                  <Lock className="size-3.5" aria-hidden="true" /> Visible to: {titleCase(profile.profileVisibility)}.{" "}
+                  <Link href="/account/settings" className="text-accent hover:underline">
+                    Change
+                  </Link>
+                </p>
               ) : null}
-              {profile.location ? (
-                <li className="flex items-center gap-2">
-                  <MapPin className="size-4" aria-hidden="true" /> {profile.location}
-                </li>
-              ) : null}
-              {profile.website ? (
-                <li className="flex items-center gap-2">
-                  <Globe className="size-4" aria-hidden="true" />
-                  <a href={profile.website} rel="noopener noreferrer nofollow" target="_blank" className="text-accent hover:underline">
-                    {profile.website.replace(/^https:\/\//, "")}
-                  </a>
-                </li>
-              ) : null}
-              <li>Member since {formatDate(profile.memberSince)}</li>
-            </ul>
-            {profile.bio ? <p className="text-sm leading-7 whitespace-pre-line">{profile.bio}</p> : null}
+            </section>
+
+            {profile.openTo.length ? (
+              <Card className="p-5">
+                <h2 className="flex items-center gap-2 text-sm font-semibold">
+                  <Sparkles className="size-4 text-accent" aria-hidden="true" /> Open to
+                </h2>
+                <ul className="mt-3 flex flex-wrap gap-2">
+                  {profile.openTo.map((o) => (
+                    <li key={o}>
+                      <Badge tone="accent">{OPEN_TO_LABELS[o]}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            ) : null}
+
+            {profile.bio ? (
+              <ProfileSection title="About">
+                <p className="text-sm leading-7 whitespace-pre-line">{profile.bio}</p>
+              </ProfileSection>
+            ) : null}
+
+            {profile.experiences.length ? (
+              <ProfileSection title="Experience">
+                <ol className="relative space-y-5 border-l border-border pl-5">
+                  {profile.experiences.map((e) => (
+                    <li key={e.id} className="relative">
+                      <span aria-hidden="true" className="absolute top-1.5 -left-[25px] size-2.5 rounded-full border-2 border-bg bg-accent" />
+                      <p className="font-medium">{e.title}</p>
+                      <p className="text-sm text-muted">
+                        {e.company}
+                        {e.location ? ` · ${e.location}` : ""}
+                      </p>
+                      <p className="text-xs text-muted">{experienceRange(e)}</p>
+                      {e.description ? <p className="mt-2 text-sm leading-6 whitespace-pre-line">{e.description}</p> : null}
+                    </li>
+                  ))}
+                </ol>
+              </ProfileSection>
+            ) : null}
+
+            {profile.skills.length ? (
+              <ProfileSection title="Skills and expertise">
+                <ul className="flex flex-wrap gap-2">
+                  {profile.skills.map((skill) => (
+                    <li key={skill}>
+                      <Badge>{skill}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              </ProfileSection>
+            ) : null}
+
+            {profile.achievements.length ? (
+              <ProfileSection title="Achievements">
+                <ul className="space-y-2 text-sm">
+                  {profile.achievements.map((a) => (
+                    <li key={a} className="flex gap-2">
+                      <Award className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" /> {a}
+                    </li>
+                  ))}
+                </ul>
+              </ProfileSection>
+            ) : null}
+
             {profile.interests.length ? (
-              <div className="flex flex-wrap gap-2">
-                {profile.interests.map((i) => (
-                  <Badge key={i}>{titleCase(i)}</Badge>
-                ))}
-              </div>
+              <ProfileSection title="Interests">
+                <div className="flex flex-wrap gap-2">
+                  {profile.interests.map((i) => (
+                    <Badge key={i}>{titleCase(i)}</Badge>
+                  ))}
+                </div>
+              </ProfileSection>
             ) : null}
-            {isSelf ? (
-              <p className="flex items-center gap-1.5 text-xs text-muted">
-                <Lock className="size-3.5" aria-hidden="true" /> Visible to: {titleCase(profile.profileVisibility)}.{" "}
-                <Link href="/account/settings" className="text-accent hover:underline">
-                  Change
+
+            {isSelf && !profile.experiences.length && !profile.skills.length ? (
+              <Alert tone="info">
+                Add your experience and skills so members know what you do.{" "}
+                <Link href="/profile/edit" className="text-accent hover:underline">
+                  Complete your profile
                 </Link>
-              </p>
+              </Alert>
             ) : null}
-          </section>
+          </div>
 
           <section aria-label="Posts">
             <h2 className="display mb-4 text-2xl">Posts</h2>
@@ -176,5 +249,40 @@ async function Profile({ params }: { params: Params }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function ProfileSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <Card className="p-5">
+      <h2 className="mb-3 text-sm font-semibold">{title}</h2>
+      {children}
+    </Card>
+  );
+}
+
+function SocialLinks({ links }: { links: ProfileDetail["socialLinks"] }) {
+  const items = [
+    { href: links.website, label: "Website", icon: Globe },
+    { href: links.linkedin, label: "LinkedIn", icon: Link2 },
+    { href: links.x, label: "X", icon: AtSign },
+    { href: links.instagram, label: "Instagram", icon: Camera },
+  ].filter((i): i is typeof i & { href: string } => Boolean(i.href));
+  if (items.length === 0) return null;
+  return (
+    <ul className="flex flex-wrap gap-2" aria-label="Links">
+      {items.map(({ href, label, icon: Icon }) => (
+        <li key={label}>
+          <a
+            href={href}
+            rel="noopener noreferrer nofollow"
+            target="_blank"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-muted transition-colors hover:border-accent hover:text-fg"
+          >
+            <Icon className="size-3.5" aria-hidden="true" /> {label}
+          </a>
+        </li>
+      ))}
+    </ul>
   );
 }

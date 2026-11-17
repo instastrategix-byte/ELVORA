@@ -6,78 +6,79 @@
  * Contrast targets: body text >= 7:1, secondary text >= 4.5:1, accent text >= 4.5:1.
  */
 :root {
-  --bg: #08080a;
-  --surface: #111114;
-  --surface-2: #18181d;
-  --surface-3: #202027;
-  --border: #25252c;
-  --border-strong: #34343d;
-  --fg: #f5f0e6;
-  --muted: #a9a397;
-  --accent: #c9a961;
-  --accent-strong: #e2c88f;
-  --accent-fg: #14110a;
-  --gold-1: #f0dcae;
-  --gold-2: #c9a961;
-  --gold-3: #96763a;
-  --glow: color-mix(in oklab, #c9a961 22%, transparent);
-  --shadow-soft: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 20px 40px -24px rgb(0 0 0 / 0.8);
-  --shadow-lift: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 30px 60px -28px rgb(0 0 0 / 0.9), 0 0 0 1px rgb(201 169 97 / 0.18);
-  --danger: #f06b6f;
-  --success: #5fcf98;
-  --warning: #e5b65b;
-  --ring: #c9a961;
+  --bg: #09090b;
+  --surface: #111113;
+  --surface-2: #17171a;
+  --surface-3: #1f1f23;
+  --border: #242429;
+  --border-strong: #34343b;
+  --fg: #f4f3f0;
+  --muted: #a3a2a8;
+  --accent: #d1b787;
+  --accent-strong: #e6d3ad;
+  --accent-fg: #0b0b0c;
+  /* "Platinum" metal ramp: primary actions and display highlights. */
+  --gold-1: #fbfaf7;
+  --gold-2: #d9d7d1;
+  --gold-3: #a9a6a0;
+  --glow: color-mix(in oklab, #e8e4dc 10%, transparent);
+  --shadow-soft: 0 1px 0 rgb(255 255 255 / 0.035) inset, 0 18px 36px -24px rgb(0 0 0 / 0.85);
+  --shadow-lift: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 28px 56px -28px rgb(0 0 0 / 0.95), 0 0 0 1px rgb(209 183 135 / 0.16);
+  --danger: #f2777a;
+  --success: #62cf9c;
+  --warning: #e6b862;
+  --ring: #d1b787;
   color-scheme: dark;
 }
 
 :root[data-theme="light"] {
-  --bg: #f7f3ea;
-  --surface: #fffdf8;
-  --surface-2: #f2ece1;
-  --surface-3: #e9e1d2;
-  --border: #e2d9c8;
-  --border-strong: #cfc3ad;
-  --fg: #17161a;
-  --muted: #625d55;
-  --accent: #7a5d24;
-  --accent-strong: #5f4718;
-  --accent-fg: #fffdf8;
-  --gold-1: #a8843f;
-  --gold-2: #7a5d24;
-  --gold-3: #5a4318;
-  --glow: color-mix(in oklab, #7a5d24 14%, transparent);
-  --shadow-soft: 0 1px 2px rgb(23 22 26 / 0.05), 0 16px 32px -20px rgb(23 22 26 / 0.18);
-  --shadow-lift: 0 2px 4px rgb(23 22 26 / 0.06), 0 28px 50px -24px rgb(23 22 26 / 0.28), 0 0 0 1px rgb(122 93 36 / 0.18);
+  --bg: #f6f5f2;
+  --surface: #ffffff;
+  --surface-2: #f0efeb;
+  --surface-3: #e7e5e0;
+  --border: #e4e2dc;
+  --border-strong: #cfccc4;
+  --fg: #121214;
+  --muted: #5c5b58;
+  --accent: #7b6236;
+  --accent-strong: #5e4a27;
+  --accent-fg: #ffffff;
+  --gold-1: #3b3b40;
+  --gold-2: #1d1d21;
+  --gold-3: #0f0f11;
+  --glow: color-mix(in oklab, #121214 8%, transparent);
+  --shadow-soft: 0 1px 2px rgb(18 18 20 / 0.04), 0 14px 30px -20px rgb(18 18 20 / 0.16);
+  --shadow-lift: 0 2px 4px rgb(18 18 20 / 0.05), 0 26px 48px -24px rgb(18 18 20 / 0.24), 0 0 0 1px rgb(123 98 54 / 0.16);
   --danger: #b4232b;
   --success: #1e7a4c;
   --warning: #8a5a00;
-  --ring: #7a5d24;
+  --ring: #7b6236;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
-    --bg: #f7f3ea;
-    --surface: #fffdf8;
-    --surface-2: #f2ece1;
-    --surface-3: #e9e1d2;
-    --border: #e2d9c8;
-    --border-strong: #cfc3ad;
-    --fg: #17161a;
-    --muted: #625d55;
-    --accent: #7a5d24;
-    --accent-strong: #5f4718;
-    --accent-fg: #fffdf8;
-    --gold-1: #a8843f;
-    --gold-2: #7a5d24;
-    --gold-3: #5a4318;
-    --glow: color-mix(in oklab, #7a5d24 14%, transparent);
-    --shadow-soft: 0 1px 2px rgb(23 22 26 / 0.05), 0 16px 32px -20px rgb(23 22 26 / 0.18);
-    --shadow-lift: 0 2px 4px rgb(23 22 26 / 0.06), 0 28px 50px -24px rgb(23 22 26 / 0.28), 0 0 0 1px rgb(122 93 36 / 0.18);
+    --bg: #f6f5f2;
+    --surface: #ffffff;
+    --surface-2: #f0efeb;
+    --surface-3: #e7e5e0;
+    --border: #e4e2dc;
+    --border-strong: #cfccc4;
+    --fg: #121214;
+    --muted: #5c5b58;
+    --accent: #7b6236;
+    --accent-strong: #5e4a27;
+    --accent-fg: #ffffff;
+    --gold-1: #3b3b40;
+    --gold-2: #1d1d21;
+    --gold-3: #0f0f11;
+    --glow: color-mix(in oklab, #121214 8%, transparent);
+    --shadow-soft: 0 1px 2px rgb(18 18 20 / 0.04), 0 14px 30px -20px rgb(18 18 20 / 0.16);
+    --shadow-lift: 0 2px 4px rgb(18 18 20 / 0.05), 0 26px 48px -24px rgb(18 18 20 / 0.24), 0 0 0 1px rgb(123 98 54 / 0.16);
     --danger: #b4232b;
     --success: #1e7a4c;
     --warning: #8a5a00;
-    --ring: #7a5d24;
+    --ring: #7b6236;
     color-scheme: light;
   }
 }
@@ -172,7 +173,7 @@ body::before {
   inset: 0;
   z-index: 60;
   pointer-events: none;
-  opacity: 0.035;
+  opacity: 0.025;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -208,7 +209,7 @@ body::before {
   @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
 }
 
-/* Champagne-gold gradient text. */
+/* Platinum gradient text (graphite in the light theme). */
 @utility text-gold {
   background-image: linear-gradient(105deg, var(--gold-1) 0%, var(--gold-2) 45%, var(--gold-3) 100%);
   background-clip: text;
@@ -219,7 +220,7 @@ body::before {
   margin-inline-end: -0.12em;
 }
 
-/* Gold gradient fill (primary actions, highlights). */
+/* Platinum fill for primary actions (graphite in the light theme). */
 @utility bg-gold {
   background-image: linear-gradient(105deg, var(--gold-1) 0%, var(--gold-2) 50%, var(--gold-3) 100%);
 }
@@ -231,7 +232,7 @@ body::before {
   box-shadow: var(--shadow-soft);
 }
 
-/* Interactive panel: lifts and picks up a gold hairline on hover. */
+/* Interactive panel: lifts and picks up a champagne hairline on hover. */
 @utility panel-interactive {
   @apply panel transition-[transform,box-shadow,border-color] duration-300;
   &:hover {

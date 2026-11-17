@@ -1,6 +1,9 @@
 /** Route prefixes that require a signed-in user (checked optimistically in proxy.ts). */
 const PROTECTED_PREFIXES = [
+  "/home",
   "/feed",
+  "/events",
+  "/search",
   "/connections",
   "/messages",
   "/notifications",
@@ -18,7 +21,7 @@ export function isProtectedPath(pathname: string): boolean {
 }
 
 /** Only allow same-origin relative redirects (prevents open redirects via ?next=). */
-export function safeNextPath(next: string | null | undefined, fallback = "/feed"): string {
+export function safeNextPath(next: string | null | undefined, fallback = "/home"): string {
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return fallback;
   return next;
 }

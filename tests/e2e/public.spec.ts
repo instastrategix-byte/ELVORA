@@ -22,6 +22,7 @@ test.describe("public experience", () => {
     ["/discover", "People and businesses worth knowing."],
     ["/luxury", "The exceptional, verified."],
     ["/apply", "Join ELVORA."],
+    ["/help", "How can we help?"],
   ] as const) {
     test(`${path} renders`, async ({ page }) => {
       const response = await page.goto(path);
@@ -62,7 +63,7 @@ test.describe("public experience", () => {
 });
 
 test.describe("access control", () => {
-  for (const path of ["/feed", "/messages", "/notifications", "/account/membership", "/business", "/ads", "/admin"]) {
+  for (const path of ["/home", "/feed", "/events", "/search", "/messages", "/notifications", "/account/membership", "/business", "/ads", "/admin"]) {
     test(`${path} requires sign-in`, async ({ page }) => {
       await page.goto(path);
       await expect(page).toHaveURL(new RegExp(`/sign-in\\?next=${encodeURIComponent(path).replace(/%2F/g, "(%2F|/)")}`));

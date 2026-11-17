@@ -235,3 +235,71 @@ export async function grantPlan(db: DbClient, input: z.infer<typeof planGrantSch
 export async function revokePlanGrant(db: DbClient, id: string, reason?: string) {
   unwrap(await db.rpc("revoke_plan_grant", { p_id: id, p_reason: reason }));
 }
+
+export type PlatformMetrics = {
+  members: number;
+  newMembers7d: number;
+  newMembers30d: number;
+  onboarded: number;
+  verifiedMembers: number;
+  activeSubscriptions: number;
+  activeGrants: number;
+  posts7d: number;
+  approvedBusinesses: number;
+  publishedListings: number;
+  activeCampaigns: number;
+};
+
+/**
+ * Platform analytics for the admin console: head-only counts (no rows leave the database), run
+ * as the signed-in staff member so RLS still applies.
+ */
+export async function platformMetrics(db: DbClient): Promise<PlatformMetrics> {
+  const now = Date.now();
+  const ago = (days: number) => new Date(now - days * 86_400_000).toISOString();
+  const nowIso = new Date(now).toISOString();
+  const count = async (q: PromiseLike<{ count: number | null; error: unknown }>) => {
+    const { count: n, error } = await q;
+    if (error) throw error;
+    return n ?? 0;
+  };
+  const head = { count: "exact", head: true } as const;
+  const [
+    members,
+    newMembers7d,
+    newMembers30d,
+    onboarded,
+    verifiedMembers,
+    activeSubscriptions,
+    activeGrants,
+    posts7d,
+    approvedBusinesses,
+    publishedListings,
+    activeCampaigns,
+  ] = await Promise.all([
+    count(db.from("profiles").select("id", head)),
+    count(db.from("profiles").select("id", head).gte("created_at", ago(7))),
+    count(db.from("profiles").select("id", head).gte("created_at", ago(30))),
+    count(db.from("profiles").select("id", head).not("onboarding_completed_at", "is", null)),
+    count(db.from("profiles").select("id", head).filter("verified_kinds", "neq", "{}")),
+    count(db.from("subscriptions").select("id", head).in("status", ["active", "trialing", "past_due"])),
+    count(db.from("plan_grants").select("id", head).is("revoked_at", null).gt("expires_at", nowIso)),
+    count(db.from("posts").select("id", head).gte("created_at", ago(7))),
+    count(db.from("businesses").select("id", head).eq("status", "approved")),
+    count(db.from("listings").select("id", head).eq("status", "published")),
+    count(db.from("ad_campaigns").select("id", head).eq("status", "active")),
+  ]);
+  return {
+    members,
+    newMembers7d,
+    newMembers30d,
+    onboarded,
+    verifiedMembers,
+    activeSubscriptions,
+    activeGrants,
+    posts7d,
+    approvedBusinesses,
+    publishedListings,
+    activeCampaigns,
+  };
+}

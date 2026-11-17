@@ -16,6 +16,13 @@ export const GET = route({ name: "profile.get", auth: "user" }, async ({ session
     location: p.location,
     website: p.website,
     interests: p.interests,
+    memberType: p.member_type,
+    skills: p.skills,
+    openTo: p.open_to,
+    achievements: p.achievements,
+    linkedinUrl: p.linkedin_url,
+    xUrl: p.x_url,
+    instagramUrl: p.instagram_url,
     avatarPath: p.avatar_path,
     coverPath: p.cover_path,
   };

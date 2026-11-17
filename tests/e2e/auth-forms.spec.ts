@@ -64,7 +64,8 @@ test.describe("signed-in journeys @supabase", () => {
     await page.getByLabel("Email").fill("isabella@seed.elvora.test");
     await page.getByLabel("Password").fill("ElvoraLocal2026");
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page).toHaveURL(/\/feed/);
+    await expect(page).toHaveURL(/\/home/);
+    await page.goto("/feed");
     const text = `E2E post ${Date.now()}`;
     await page.getByLabel("What would you like to share?").fill(text);
     await page.getByRole("button", { name: "Post", exact: true }).click();

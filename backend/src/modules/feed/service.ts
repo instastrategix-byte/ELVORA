@@ -63,7 +63,7 @@ async function hydrate(db: DbClient, viewer: Viewer | null, rows: PostRow[]): Pr
 export async function listFeed(
   db: DbClient,
   viewer: Viewer,
-  opts: { scope: "network" | "all"; cursor?: string; authorId?: string },
+  opts: { scope: "network" | "all"; cursor?: string; authorId?: string; q?: string },
 ): Promise<Page<PostView>> {
   let query = db
     .from("posts")
@@ -85,6 +85,10 @@ export async function listFeed(
     for (const f of unwrap(follows)) authorIds.add(f.followee_id);
     query = query.in("author_id", [...authorIds]);
   }
+
+  // Text search: PostgREST filter syntax characters are stripped, so input can't alter the filter.
+  const q = opts.q?.replace(/[%,()*\\]/g, " ").trim();
+  if (q) query = query.ilike("body", `%${q}%`);
 
   const cursor = decodeCursor(opts.cursor);
   if (cursor) query = query.or(olderThanFilter(cursor));

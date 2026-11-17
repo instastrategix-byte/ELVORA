@@ -13,7 +13,7 @@ export function GoogleButton({ next }: { next?: string }) {
   async function signIn() {
     setPending(true);
     setError(null);
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next || "/feed")}`;
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next || "/home")}`;
     const { error: err } = await createClient().auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
     if (err) {
       setError("Google sign-in is unavailable right now. Please use email instead.");

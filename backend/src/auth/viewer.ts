@@ -69,7 +69,7 @@ export async function requirePageSession(req: PageRequirement = {}): Promise<Ses
   const { viewer } = session;
   if (viewer.accountStatus !== "active") redirect("/account/restricted");
   if (req.onboarded !== false && !viewer.onboarded) redirect("/onboarding");
-  if (req.staff && !isStaff(viewer, req.staff)) redirect("/feed");
+  if (req.staff && !isStaff(viewer, req.staff)) redirect("/home");
   return session;
 }
 

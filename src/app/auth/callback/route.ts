@@ -6,7 +6,7 @@ import { createClient } from "@backend/db/server";
 export async function GET(request: NextRequest) {
   const url = request.nextUrl;
   const code = url.searchParams.get("code");
-  const next = safeNextPath(url.searchParams.get("next"), "/feed");
+  const next = safeNextPath(url.searchParams.get("next"), "/home");
   const providerError = url.searchParams.get("error_description");
 
   if (code) {

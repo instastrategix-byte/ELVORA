@@ -214,7 +214,7 @@ export function ResetPasswordForm({ mode = "reset" }: { mode?: "reset" | "change
       <div className="space-y-4">
         <Alert tone="success">{state.message}</Alert>
         <Button asChild size="lg" className="w-full">
-          <Link href="/feed">Continue</Link>
+          <Link href="/home">Continue</Link>
         </Button>
       </div>
     );
