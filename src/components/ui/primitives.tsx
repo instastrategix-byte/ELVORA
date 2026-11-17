@@ -24,7 +24,7 @@ export function Badge({ tone = "neutral", className, ...props }: ComponentProps<
 }
 
 export function Skeleton({ className, ...props }: ComponentProps<"div">) {
-  return <div aria-hidden="true" className={cn("animate-pulse rounded-lg bg-surface-2", className)} {...props} />;
+  return <div aria-hidden="true" className={cn("shimmer rounded-lg", className)} {...props} />;
 }
 
 export function Spinner({ className, label = "Loading" }: { className?: string; label?: string }) {
@@ -91,7 +91,7 @@ export function EmptyState({
       )}
     >
       {icon ? (
-        <div className="mb-5 flex size-14 items-center justify-center rounded-full border border-accent/30 bg-bg/60 text-accent shadow-[0_0_30px_-8px_var(--glow)] [&_svg]:size-6">
+        <div className="mb-5 flex size-14 items-center justify-center rounded-full border border-border-strong bg-surface-2 text-accent ring-8 ring-surface-2/40 [&_svg]:size-6">
           {icon}
         </div>
       ) : null}

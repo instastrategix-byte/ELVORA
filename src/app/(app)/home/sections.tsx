@@ -1,54 +1,20 @@
-import { BadgeCheck, Building2, Heart, Inbox, Megaphone, MessageCircle, ShieldCheck, Sparkles } from "lucide-react";
+import { BadgeCheck, Building2, Gem, Inbox, Megaphone, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { Stat, Widget, WidgetError } from "@/components/dashboard/widgets";
-import { ListingCard } from "@/components/listings/listing-card";
+import { Widget, WidgetError } from "@/components/dashboard/widgets";
 import { MemberLink } from "@/components/social/member-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/primitives";
 import { attempt } from "@/lib/attempt";
-import { formatDate, formatRelative } from "@/lib/format";
-import { describeNotification } from "@/lib/notification-text";
+import { formatDate, titleCase } from "@/lib/format";
 import { queueCounts } from "@backend/modules/admin/service";
 import { listCampaigns } from "@backend/modules/ads/service";
 import { hasFeature, isStaff, VERIFICATION_LABELS } from "@backend/modules/auth/permissions";
-import { networkStats, suggestMembers } from "@backend/modules/discovery/service";
-import { listFeed } from "@backend/modules/feed/service";
+import { suggestMembers } from "@backend/modules/discovery/service";
 import { browseListings, listOwnListings, listReceivedInquiries } from "@backend/modules/listings/service";
 import { getMembershipOverview } from "@backend/modules/membership/service";
-import { unreadConversationCount } from "@backend/modules/messaging/service";
-import { listNotifications, unreadNotificationCount } from "@backend/modules/notifications/service";
 import { requirePageSession } from "@backend/auth/viewer";
 
 const session = () => requirePageSession({ next: "/home" });
-
-export async function StatsSection() {
-  const { viewer, db } = await session();
-  const [stats, unreadMessages, unreadNotifications] = await Promise.all([
-    attempt(() => networkStats(db, viewer)),
-    attempt(() => unreadConversationCount(db)),
-    attempt(() => unreadNotificationCount(db, viewer)),
-  ]);
-  const s = stats.ok ? stats.data : null;
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-      <Stat
-        label="Connections"
-        value={s?.connections ?? "—"}
-        hint={s && s.newConnections30d > 0 ? `+${s.newConnections30d} in 30 days` : undefined}
-        href="/connections"
-      />
-      <Stat
-        label="Requests waiting"
-        value={s?.pendingReceived ?? "—"}
-        hint={s && s.pendingReceived > 0 ? "Review now" : undefined}
-        href="/connections?tab=received"
-      />
-      <Stat label="Followers" value={s?.followers ?? "—"} hint={s ? `Following ${s.following}` : undefined} />
-      <Stat label="Unread conversations" value={unreadMessages.ok ? unreadMessages.data : "—"} href="/messages" />
-      <Stat label="Unread notifications" value={unreadNotifications.ok ? unreadNotifications.data : "—"} href="/notifications" />
-    </div>
-  );
-}
 
 export async function SuggestionsSection() {
   const { viewer, db } = await session();
@@ -72,90 +38,6 @@ export async function SuggestionsSection() {
               </Button>
             </li>
           ))}
-        </ul>
-      )}
-    </Widget>
-  );
-}
-
-export async function NetworkPostsSection() {
-  const { viewer, db } = await session();
-  const network = await attempt(() => listFeed(db, viewer, { scope: "network" }));
-  // A quiet network falls back to the wider community so the panel is never empty for new members.
-  const useAll = network.ok && network.data.items.length === 0;
-  const result = useAll ? await attempt(() => listFeed(db, viewer, { scope: "all" })) : network;
-  return (
-    <Widget title={useAll ? "Trending in the community" : "From your network"} href={useAll ? "/feed?scope=all" : "/feed"} hrefLabel="Open feed">
-      {!result.ok ? (
-        <WidgetError what="posts" />
-      ) : result.data.items.length === 0 ? (
-        <div className="space-y-3 text-sm text-muted">
-          <p>No posts yet. Be the first to share a perspective, an opportunity or a milestone.</p>
-          <Button asChild size="sm">
-            <Link href="/feed">Write a post</Link>
-          </Button>
-        </div>
-      ) : (
-        <ul className="divide-y divide-border">
-          {(useAll ? [...result.data.items].sort((a, b) => b.likeCount + b.commentCount - (a.likeCount + a.commentCount)) : result.data.items)
-            .slice(0, 4)
-            .map((post) => (
-              <li key={post.id} className="py-4 first:pt-0 last:pb-0">
-                <MemberLink member={post.author} size={32} subtitle={formatRelative(post.createdAt)} />
-                <Link href={`/posts/${post.id}`} className="mt-2 block line-clamp-3 text-sm leading-6 text-fg/90 hover:text-fg">
-                  {post.body}
-                </Link>
-                <p className="mt-2 flex items-center gap-4 text-xs text-muted">
-                  <span className="inline-flex items-center gap-1">
-                    <Heart className="size-3.5" aria-hidden="true" /> {post.likeCount}
-                    <span className="sr-only">likes</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <MessageCircle className="size-3.5" aria-hidden="true" /> {post.commentCount}
-                    <span className="sr-only">comments</span>
-                  </span>
-                </p>
-              </li>
-            ))}
-        </ul>
-      )}
-    </Widget>
-  );
-}
-
-export async function NotificationsSection() {
-  const { viewer, db } = await session();
-  const result = await attempt(() => listNotifications(db, viewer));
-  return (
-    <Widget title="Notifications" href="/notifications">
-      {!result.ok ? (
-        <WidgetError what="notifications" />
-      ) : result.data.items.length === 0 ? (
-        <p className="text-sm text-muted">You&apos;re all caught up.</p>
-      ) : (
-        <ul className="space-y-3">
-          {result.data.items.slice(0, 5).map((n) => {
-            const { text, href } = describeNotification(n);
-            const inner = (
-              <>
-                <span className="block text-sm leading-5">{text}</span>
-                <span className="text-xs text-muted">{formatRelative(n.createdAt)}</span>
-              </>
-            );
-            return (
-              <li key={n.id} className="flex gap-3">
-                <span aria-hidden="true" className={`mt-1.5 size-1.5 shrink-0 rounded-full ${n.readAt ? "bg-transparent" : "bg-accent"}`} />
-                {href ? (
-                  <Link href={href} className="min-w-0 hover:text-accent">
-                    {inner}
-                  </Link>
-                ) : (
-                  <span className="min-w-0">{inner}</span>
-                )}
-                {!n.readAt ? <span className="sr-only">Unread</span> : null}
-              </li>
-            );
-          })}
         </ul>
       )}
     </Widget>
@@ -249,10 +131,30 @@ export async function MarketplaceSection() {
       {!result.ok ? (
         <WidgetError what="listings" />
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="space-y-3">
           {result.data.items.slice(0, 3).map((l) => (
             <li key={l.id}>
-              <ListingCard listing={l} canSave={hasFeature(viewer, "luxury.view_members")} />
+              <Link href={`/luxury/${l.slug}`} className="group flex items-center gap-3 rounded-xl p-1.5 -m-1.5 hover:bg-surface-2">
+                <span className="size-14 shrink-0 overflow-hidden rounded-lg bg-surface-3">
+                  {l.coverUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- listing media from storage
+                    <img src={l.coverUrl} alt="" className="size-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+                  ) : (
+                    <Gem className="m-auto mt-4 size-5 text-muted" aria-hidden="true" />
+                  )}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium group-hover:text-accent">{l.title}</span>
+                  <span className="block truncate text-xs text-muted">
+                    {[l.city, l.country].filter(Boolean).join(", ") || titleCase(l.category)}
+                  </span>
+                  <span className="mt-0.5 flex items-center gap-1 text-[11px] text-muted">
+                    {l.business.verified ? <BadgeCheck className="size-3 text-accent" aria-hidden="true" /> : null}
+                    {l.business.name}
+                    {l.business.verified ? <span className="sr-only">(verified business)</span> : null}
+                  </span>
+                </span>
+              </Link>
             </li>
           ))}
         </ul>
@@ -277,7 +179,7 @@ export async function WorkspacesSection() {
   ]);
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="space-y-4">
       {showBusiness ? (
         <Widget title="Business" href="/business" hrefLabel="Open workspace">
           <WorkspaceIcon icon={Building2} />

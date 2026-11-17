@@ -6,8 +6,8 @@ import type { ProfileSummary } from "@backend/modules/profiles/types";
 
 export function MemberCard({ member }: { member: ProfileSummary }) {
   return (
-    <article className="relative flex items-start gap-4 rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-accent/50">
-      <Avatar src={member.avatarUrl} name={member.displayName} size={52} />
+    <article className="panel-interactive relative flex items-start gap-4 p-5">
+      <Avatar src={member.avatarUrl} name={member.displayName} size={56} className={member.verifiedKinds.length > 0 ? "ring-2 ring-accent/60 ring-offset-2 ring-offset-surface" : undefined} />
       <div className="min-w-0 flex-1">
         <h3 className="flex items-center gap-1.5 truncate font-medium">
           <Link href={`/members/${member.handle}`} className="truncate after:absolute after:inset-0">

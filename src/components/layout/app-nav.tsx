@@ -14,6 +14,7 @@ import {
   MessageSquare,
   MoreHorizontal,
   Newspaper,
+  Plus,
   Search,
   Settings,
   ShieldCheck,
@@ -80,7 +81,7 @@ export function NavLinks({ pathname, workspaces = {} }: { pathname: string; work
   ];
   return (
     <nav aria-label="App" className="space-y-5">
-      <SearchBox />
+      <SearchBox className="lg:hidden" id="nav-search" />
       {groups
         .filter(([, items]) => items.length > 0)
         .map(([title, items]) => (
@@ -111,15 +112,15 @@ export function NavLinks({ pathname, workspaces = {} }: { pathname: string; work
 }
 
 /** Global search across members, posts, listings and events. Plain GET form: works without JS. */
-export function SearchBox({ className }: { className?: string }) {
+export function SearchBox({ className, id = "global-search" }: { className?: string; id?: string }) {
   return (
     <form action="/search" role="search" className={cn("relative", className)}>
-      <label htmlFor="global-search" className="sr-only">
+      <label htmlFor={id} className="sr-only">
         Search ELVORA
       </label>
       <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
       <input
-        id="global-search"
+        id={id}
         name="q"
         type="search"
         placeholder="Search people, posts, listings"
@@ -130,7 +131,22 @@ export function SearchBox({ className }: { className?: string }) {
   );
 }
 
-const TABS: NavItem[] = MAIN.filter((i) => ["/home", "/discover", "/messages", "/notifications"].includes(i.href));
+const TABS_LEFT: NavItem[] = MAIN.filter((i) => ["/home", "/discover"].includes(i.href));
+const TABS_RIGHT: NavItem[] = MAIN.filter((i) => ["/messages"].includes(i.href));
+
+function TabLink({ item, pathname }: { item: NavItem; pathname: string }) {
+  const { href, label, icon: Icon } = item;
+  return (
+    <Link
+      href={href}
+      aria-current={isActive(pathname, href) ? "page" : undefined}
+      className="pressable flex flex-col items-center gap-1 py-2.5 text-[11px] text-muted aria-[current=page]:font-medium aria-[current=page]:text-fg"
+    >
+      <Icon className="size-5" aria-hidden="true" />
+      {label}
+    </Link>
+  );
+}
 
 export function MobileTabBar({ workspaces = {} }: { workspaces?: Workspaces }) {
   const pathname = usePathname();
@@ -138,16 +154,19 @@ export function MobileTabBar({ workspaces = {} }: { workspaces?: Workspaces }) {
   return (
     <nav aria-label="App shortcuts" className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
       <ul className="grid grid-cols-5">
-        {TABS.map(({ href, label, icon: Icon }) => (
-          <li key={href}>
-            <Link
-              href={href}
-              aria-current={isActive(pathname, href) ? "page" : undefined}
-              className="flex flex-col items-center gap-1 py-2.5 text-[11px] text-muted aria-[current=page]:text-accent"
-            >
-              <Icon className="size-5" aria-hidden="true" />
-              {label}
-            </Link>
+        {TABS_LEFT.map((item) => (
+          <li key={item.href}>
+            <TabLink item={item} pathname={pathname} />
+          </li>
+        ))}
+        <li className="flex items-center justify-center">
+          <Link href="/feed#compose" aria-label="Create a post" className="pressable flex size-11 items-center justify-center rounded-full bg-gold text-accent-fg shadow-[var(--shadow-soft)]">
+            <Plus className="size-5" aria-hidden="true" />
+          </Link>
+        </li>
+        {TABS_RIGHT.map((item) => (
+          <li key={item.href}>
+            <TabLink item={item} pathname={pathname} />
           </li>
         ))}
         <li>

@@ -12,7 +12,7 @@ import { getViewer } from "@backend/auth/viewer";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <SiteHeader />
+      <SiteHeader variant="app" />
       <div className="container-page flex gap-8 py-6 lg:py-8">
         <aside className="sticky top-24 hidden max-h-[calc(100vh-7rem)] w-56 shrink-0 self-start overflow-y-auto pb-6 lg:block">
           <Suspense fallback={<NavLinks pathname="" />}>

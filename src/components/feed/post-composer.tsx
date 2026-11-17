@@ -82,9 +82,9 @@ export function PostComposer({ authorName, avatarUrl, onCreated }: { authorName:
   }
 
   return (
-    <form onSubmit={submit} className="rounded-2xl border border-border bg-surface p-5" aria-label="Create a post">
+    <form id="compose" onSubmit={submit} className="panel scroll-mt-24 p-4 transition-colors focus-within:border-border-strong sm:p-5" aria-label="Create a post">
       <div className="flex gap-3">
-        <Avatar src={avatarUrl} name={authorName} size={42} />
+        <Avatar src={avatarUrl} name={authorName} size={44} />
         <div className="min-w-0 flex-1">
           <label htmlFor="composer" className="sr-only">
             What would you like to share?
@@ -94,9 +94,18 @@ export function PostComposer({ authorName, avatarUrl, onCreated }: { authorName:
             value={body}
             onChange={(e) => setBody(e.target.value)}
             maxLength={POST_MAX_LENGTH}
-            placeholder="Share an update with your network…"
-            className="min-h-24 border-0 bg-transparent px-0 focus:ring-0"
+            placeholder="Share a perspective, an opportunity or a milestone…"
+            className="min-h-20 resize-none border-0 bg-transparent px-0 text-base hover:border-0 focus:ring-0"
+            aria-describedby="composer-hint"
           />
+          <p id="composer-hint" className="flex justify-between gap-3 text-xs text-muted">
+            <span>Use #topics and @handles to reach the right people.</span>
+            {body.length > POST_MAX_LENGTH * 0.8 ? (
+              <span className={body.length >= POST_MAX_LENGTH ? "text-danger" : ""}>
+                {body.length}/{POST_MAX_LENGTH}
+              </span>
+            ) : null}
+          </p>
         </div>
       </div>
 
@@ -132,14 +141,14 @@ export function PostComposer({ authorName, avatarUrl, onCreated }: { authorName:
         </Alert>
       ) : null}
 
-      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border pt-3">
         <input ref={imageInput} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => (addFiles(e.target.files, "image"), (e.target.value = ""))} />
         <input ref={videoInput} type="file" accept="video/mp4,video/webm" hidden onChange={(e) => (addFiles(e.target.files, "video"), (e.target.value = ""))} />
         <Button variant="ghost" size="sm" onClick={() => imageInput.current?.click()} disabled={attachments.length >= MAX_ATTACHMENTS}>
-          <ImagePlus /> Photo
+          <ImagePlus className="text-accent" /> Photo
         </Button>
         <Button variant="ghost" size="sm" onClick={() => videoInput.current?.click()} disabled={attachments.length >= MAX_ATTACHMENTS}>
-          <Video /> Video
+          <Video className="text-accent" /> Video
         </Button>
         <label className="ml-auto flex items-center gap-2 text-sm text-muted">
           <span className="sr-only sm:not-sr-only">Visible to</span>

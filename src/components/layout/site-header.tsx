@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/primitives";
+import { SearchBox } from "./app-nav";
 import { Logo } from "./logo";
 import { HeaderSession } from "./header-session";
 import { MobileMenu } from "./mobile-menu";
@@ -15,18 +16,24 @@ export const PUBLIC_NAV = [
 ];
 
 /** Static shell; the session-dependent actions stream in behind Suspense. */
-export function SiteHeader() {
+export function SiteHeader({ variant = "site" }: { variant?: "site" | "app" }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-bg/70 backdrop-blur-xl backdrop-saturate-150 after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-gradient-to-r after:from-transparent after:via-accent/30 after:to-transparent">
+    <header className="sticky top-0 z-40 border-b border-border/60 bg-bg/70 backdrop-blur-xl backdrop-saturate-150 after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-gradient-to-r after:from-transparent after:via-border-strong after:to-transparent">
       <div className="container-page flex h-16 items-center gap-6">
         <Logo />
-        <nav aria-label="Primary" className="hidden flex-1 items-center gap-1 md:flex">
-          {PUBLIC_NAV.map((item) => (
-            <Link key={item.href} href={item.href} className="rounded-full px-3 py-2 text-sm text-muted transition-colors hover:text-fg">
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        {variant === "app" ? (
+          <div className="hidden flex-1 justify-center md:flex">
+            <SearchBox className="w-full max-w-md" id="header-search" />
+          </div>
+        ) : (
+          <nav aria-label="Primary" className="hidden flex-1 items-center gap-1 md:flex">
+            {PUBLIC_NAV.map((item) => (
+              <Link key={item.href} href={item.href} className="rounded-full px-3 py-2 text-sm text-muted transition-colors hover:text-fg">
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        )}
         <div className="ml-auto flex items-center gap-1 md:ml-0">
           <ThemeToggle />
           <Suspense
@@ -38,9 +45,11 @@ export function SiteHeader() {
           >
             <HeaderSession />
           </Suspense>
-          <Suspense fallback={<span className="size-10 md:hidden" aria-hidden="true" />}>
-            <MobileMenu items={PUBLIC_NAV} />
-          </Suspense>
+          {variant === "site" ? (
+            <Suspense fallback={<span className="size-10 md:hidden" aria-hidden="true" />}>
+              <MobileMenu items={PUBLIC_NAV} />
+            </Suspense>
+          ) : null}
         </div>
       </div>
     </header>

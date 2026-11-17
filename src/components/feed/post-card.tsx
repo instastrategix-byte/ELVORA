@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, Globe, Heart, Link2, Lock, MessageCircle, MoreHorizontal, Pencil, Trash2, Users } from "lucide-react";
+import { Bookmark, Globe, Heart, Lock, MessageCircle, MoreHorizontal, Pencil, Send, Trash2, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { MemberLink } from "@/components/social/member-card";
@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { POST_MAX_LENGTH } from "@backend/modules/feed/schemas";
 import type { PostView } from "@backend/modules/feed/types";
 import { Comments } from "./comments";
+import { MediaGallery } from "./media-gallery";
+import { RichText } from "./rich-text";
 
 const VISIBILITY = {
   public: { icon: Globe, label: "Public" },
@@ -38,11 +40,13 @@ export function PostCard({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(initial.body);
   const [busy, setBusy] = useState(false);
+  const [popKey, setPopKey] = useState(0);
   const toast = useToast();
   const Vis = VISIBILITY[post.visibility];
 
   async function toggleLike() {
     const liked = !post.likedByViewer;
+    if (liked) setPopKey((k) => k + 1);
     // Optimistic; reconciled with the server's authoritative count.
     setPost((p) => ({ ...p, likedByViewer: liked, likeCount: p.likeCount + (liked ? 1 : -1) }));
     try {
@@ -68,6 +72,15 @@ export function PostCard({
 
   async function share() {
     const url = `${window.location.origin}/posts/${post.id}`;
+    // Native share sheet on phones; clipboard elsewhere.
+    if (typeof navigator.share === "function" && window.matchMedia("(pointer: coarse)").matches) {
+      try {
+        await navigator.share({ url, title: `Post by ${post.author.displayName}` });
+        return;
+      } catch {
+        // Cancelled or unavailable: fall back to copying the link.
+      }
+    }
     try {
       await navigator.clipboard.writeText(url);
       toast.show(post.visibility === "public" ? "Link copied" : `Link copied — only ${Vis.label.toLowerCase()} who can see this post can open it`);
@@ -104,12 +117,12 @@ export function PostCard({
   }
 
   return (
-    <article className="rounded-2xl border border-border bg-surface p-5 sm:p-6" aria-labelledby={`post-${post.id}-author`}>
+    <article className="panel p-4 transition-colors hover:border-border-strong sm:p-5" aria-labelledby={`post-${post.id}-author`}>
       <header className="flex items-start justify-between gap-3">
         <div id={`post-${post.id}-author`} className="min-w-0">
           <MemberLink
             member={post.author}
-            size={42}
+            size={44}
             subtitle={
               <span className="inline-flex items-center gap-1.5">
                 <Link href={`/posts/${post.id}`} className="hover:underline">
@@ -159,38 +172,50 @@ export function PostCard({
           </div>
         </div>
       ) : post.body ? (
-        <p className="mt-4 text-[15px] leading-7 whitespace-pre-line break-words">{post.body}</p>
+        <RichText text={post.body} className="mt-3.5" />
       ) : null}
 
       {post.media.length ? (
-        <div className={cn("mt-4 grid gap-2 overflow-hidden rounded-xl", post.media.length > 1 && "grid-cols-2")}>
-          {post.media.map((m) =>
-            !m.url ? (
-              <div key={m.id} className="flex aspect-video items-center justify-center bg-surface-2 text-xs text-muted">
-                Media unavailable
-              </div>
-            ) : m.type === "video" ? (
-              <video key={m.id} src={m.url} controls preload="metadata" className="aspect-video w-full rounded-xl bg-black" aria-label={m.alt ?? "Video"} />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URLs from private storage
-              <img key={m.id} src={m.url} alt={m.alt ?? ""} loading="lazy" className="max-h-[520px] w-full rounded-xl object-cover" />
-            ),
-          )}
+        <div className="mt-4">
+          <MediaGallery media={post.media} />
         </div>
       ) : null}
 
-      <footer className="mt-4 flex items-center gap-1 border-t border-border pt-3 text-sm text-muted">
+      {post.likeCount > 0 || post.commentCount > 0 ? (
+        <p className="mt-4 flex items-center gap-3 text-xs text-muted">
+          {post.likeCount > 0 ? (
+            <span className="inline-flex items-center gap-1">
+              <span className="flex size-4 items-center justify-center rounded-full bg-accent text-accent-fg" aria-hidden="true">
+                <Heart className="size-2.5 fill-current" />
+              </span>
+              {post.likeCount} {post.likeCount === 1 ? "like" : "likes"}
+            </span>
+          ) : null}
+          {post.commentCount > 0 ? (
+            <button type="button" onClick={() => setShowComments(true)} className="ml-auto hover:text-fg hover:underline">
+              {post.commentCount} {post.commentCount === 1 ? "comment" : "comments"}
+            </button>
+          ) : null}
+        </p>
+      ) : null}
+
+      <footer className="mt-3 grid grid-cols-4 gap-1 border-t border-border pt-2 text-sm text-muted">
         <ActionButton onClick={toggleLike} disabled={!canInteract} pressed={post.likedByViewer} label={post.likedByViewer ? "Unlike" : "Like"}>
-          <Heart className={cn("size-4", post.likedByViewer && "fill-accent text-accent")} /> {post.likeCount || ""}
+          <Heart key={popKey} className={cn("size-[18px]", post.likedByViewer && "animate-pop fill-accent text-accent")} />
+          <span className="hidden sm:inline">{post.likedByViewer ? "Liked" : "Like"}</span>
+          <span className="sr-only">{post.likeCount}</span>
         </ActionButton>
         <ActionButton onClick={() => setShowComments((s) => !s)} pressed={showComments} label="Comments">
-          <MessageCircle className="size-4" /> {post.commentCount || ""}
+          <MessageCircle className="size-[18px]" />
+          <span className="hidden sm:inline">Comment</span>
         </ActionButton>
         <ActionButton onClick={toggleSave} disabled={!canInteract} pressed={post.savedByViewer} label={post.savedByViewer ? "Unsave" : "Save"}>
-          <Bookmark className={cn("size-4", post.savedByViewer && "fill-accent text-accent")} />
+          <Bookmark className={cn("size-[18px]", post.savedByViewer && "fill-accent text-accent")} />
+          <span className="hidden sm:inline">{post.savedByViewer ? "Saved" : "Save"}</span>
         </ActionButton>
-        <ActionButton onClick={share} label="Copy link" className="ml-auto">
-          <Link2 className="size-4" />
+        <ActionButton onClick={share} label="Share">
+          <Send className="size-[18px]" />
+          <span className="hidden sm:inline">Share</span>
         </ActionButton>
       </footer>
 
@@ -223,7 +248,10 @@ function ActionButton({
       disabled={disabled}
       aria-pressed={pressed}
       aria-label={label}
-      className={cn("inline-flex h-9 items-center gap-1.5 rounded-full px-3 hover:bg-surface-2 hover:text-fg disabled:opacity-50", className)}
+      className={cn(
+        "pressable inline-flex h-10 items-center justify-center gap-2 rounded-lg px-2 font-medium transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-50 aria-pressed:text-fg",
+        className,
+      )}
     >
       {children}
     </button>

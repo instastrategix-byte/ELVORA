@@ -1406,6 +1406,49 @@ export type Database = {
         };
         Relationships: [];
       };
+      stories: {
+        Row: {
+          id: string;
+          author_id: string;
+          media_path: string;
+          media_type: "image" | "video";
+          caption: string | null;
+          visibility: Database["public"]["Enums"]["visibility"];
+          created_at: string;
+          expires_at: string;
+        };
+        Insert: {
+          id?: string;
+          author_id: string;
+          media_path: string;
+          media_type: "image" | "video";
+          caption?: string | null;
+          visibility?: Database["public"]["Enums"]["visibility"];
+          created_at?: string;
+          expires_at?: string;
+        };
+        Update: {
+          caption?: string | null;
+          visibility?: Database["public"]["Enums"]["visibility"];
+        };
+        Relationships: [];
+      };
+      story_views: {
+        Row: {
+          story_id: string;
+          viewer_id: string;
+          viewed_at: string;
+        };
+        Insert: {
+          story_id: string;
+          viewer_id: string;
+          viewed_at?: string;
+        };
+        Update: {
+          viewed_at?: string;
+        };
+        Relationships: [];
+      };
       subscriptions: {
         Row: {
           id: string;
@@ -1565,6 +1608,10 @@ export type Database = {
       };
       can_view_profile: {
         Args: { p_id: string; p_visibility: Database["public"]["Enums"]["visibility"]; p_status: Database["public"]["Enums"]["account_status"]; p_onboarded: boolean };
+        Returns: boolean;
+      };
+      can_view_story: {
+        Args: { p_author: string; p_visibility: Database["public"]["Enums"]["visibility"]; p_expires_at: string };
         Returns: boolean;
       };
       cancel_account_deletion: {

@@ -13,7 +13,7 @@ export function MenuContent({ children, align = "end" }: { children: ReactNode; 
       <M.Content
         align={align}
         sideOffset={8}
-        className="z-50 min-w-48 rounded-xl border border-border bg-surface p-1.5 shadow-xl data-[state=open]:animate-fade-in"
+        className="z-50 min-w-52 origin-[var(--radix-dropdown-menu-content-transform-origin)] rounded-xl border border-border bg-surface p-1.5 shadow-[var(--shadow-lift)] data-[state=open]:animate-scale-in"
       >
         {children}
       </M.Content>
@@ -25,7 +25,7 @@ export function MenuItem({ className, ...props }: ComponentProps<typeof M.Item>)
   return (
     <M.Item
       className={cn(
-        "flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm outline-none select-none data-[highlighted]:bg-surface-2 data-[disabled]:opacity-50 [&_svg]:size-4",
+        "flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm outline-none select-none text-fg/90 data-[highlighted]:bg-surface-2 data-[highlighted]:text-fg data-[disabled]:opacity-50 [&_svg]:size-4 [&_svg]:text-muted",
         className,
       )}
       {...props}
