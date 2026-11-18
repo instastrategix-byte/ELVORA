@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LINK_PLATFORMS, LINK_VISIBILITIES, MAX_PROFILE_LINKS, linkUrlError } from "./links";
 import { MEMBER_TYPES, OPEN_TO } from "./types";
 
 export const VISIBILITIES = ["public", "members", "connections"] as const;
@@ -20,16 +21,6 @@ export const handleSchema = z
   .regex(/^[a-z0-9_]{3,30}$/, { error: "3–30 characters: lowercase letters, numbers and underscores" })
   .refine((h) => !/^member_[0-9a-f]{12}$/.test(h), { error: "Please choose a personal handle" });
 
-const httpsUrl = (label: string) =>
-  z
-    .union([
-      z.literal(""),
-      z.url({ protocol: /^https$/, error: `Use a full https:// ${label} address` }).max(200, { error: "Must be 200 characters or fewer" }),
-    ])
-    .transform((v) => (v === "" ? null : v))
-    .nullable()
-    .optional();
-
 const tagList = (maxItems: number, maxLen: number) =>
   z
     .array(z.string().trim().min(1).max(maxLen, { error: `Each entry must be ${maxLen} characters or fewer` }))
@@ -46,11 +37,6 @@ export const profileUpdateSchema = z.object({
   company: optionalText(80),
   industry: optionalText(60),
   location: optionalText(120),
-  website: z
-    .union([z.literal(""), z.url({ protocol: /^https$/, error: "Use a full https:// address" })])
-    .transform((v) => (v === "" ? null : v))
-    .nullable()
-    .optional(),
   interests: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
   memberType: z
     .union([z.literal(""), z.enum(MEMBER_TYPES)])
@@ -60,9 +46,6 @@ export const profileUpdateSchema = z.object({
   skills: tagList(30, 40),
   openTo: z.array(z.enum(OPEN_TO)).max(OPEN_TO.length).optional(),
   achievements: tagList(10, 160),
-  linkedinUrl: httpsUrl("LinkedIn"),
-  xUrl: httpsUrl("X"),
-  instagramUrl: httpsUrl("Instagram"),
   avatarPath: z.string().max(300).nullable().optional(),
   coverPath: z.string().max(300).nullable().optional(),
 });
@@ -72,6 +55,8 @@ export const privacyUpdateSchema = z.object({
   profileVisibility: z.enum(VISIBILITIES),
   discoverable: z.boolean(),
   messagingPolicy: z.enum(MESSAGING_POLICIES),
+  /** Reciprocal: when off, you don't share read times and don't see other people's. */
+  showReadReceipts: z.boolean().optional(),
 });
 
 export const memberSearchSchema = z.object({
@@ -108,3 +93,33 @@ const endAfterStartError = { error: "End date must be after the start date", pat
 export const experienceSchema = z.object(experienceFields).refine(endAfterStart, endAfterStartError);
 export const experienceUpdateSchema = z.object(experienceFields).partial().refine(endAfterStart, endAfterStartError);
 export type ExperienceInput = z.input<typeof experienceSchema>;
+
+// Profile links: platform-aware URL validation (the database enforces the same rule).
+const linkLabel = z
+  .string()
+  .trim()
+  .max(40, { error: "Labels can be up to 40 characters" })
+  .transform((v) => (v === "" ? null : v))
+  .nullable()
+  .optional();
+
+export const addLinkSchema = z
+  .object({
+    platform: z.enum(LINK_PLATFORMS),
+    url: z.string().trim().max(300),
+    label: linkLabel,
+    visibility: z.enum(LINK_VISIBILITIES).default("members"),
+  })
+  .superRefine((v, ctx) => {
+    const error = linkUrlError(v.platform, v.url);
+    if (error) ctx.addIssue({ code: "custom", path: ["url"], message: error });
+    if (v.platform === "other" && !v.label) ctx.addIssue({ code: "custom", path: ["label"], message: "Give this link a short name" });
+  });
+
+export const updateLinkSchema = z.object({
+  url: z.string().trim().max(300).optional(),
+  label: linkLabel,
+  visibility: z.enum(LINK_VISIBILITIES).optional(),
+});
+
+export const reorderLinksSchema = z.object({ ids: z.array(z.uuid()).min(1).max(MAX_PROFILE_LINKS) });

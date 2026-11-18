@@ -24,7 +24,11 @@ const base: ProfileDetail = {
   skills: [],
   openTo: [],
   achievements: [],
-  socialLinks: { website: "https://atelier.example", linkedin: "https://linkedin.com/in/x", x: null, instagram: "http://insecure.example" },
+  links: [
+    { id: "1", platform: "website", url: "https://atelier.example", label: null, visibility: "public", position: 0 },
+    { id: "2", platform: "linkedin", url: "https://linkedin.com/in/x", label: null, visibility: "members", position: 1 },
+    { id: "3", platform: "other", url: "http://insecure.example", label: "Old", visibility: "public", position: 2 },
+  ],
   experiences: [],
 };
 
@@ -36,6 +40,7 @@ describe("toVCard", () => {
     expect(card).toContain("FN:Isabella Maria Marchetti");
     expect(card).toContain("NOTE:Founder\\, Atelier\\; investor");
     expect(card).toContain("URL;TYPE=LINKEDIN:https://linkedin.com/in/x");
+    expect(card).toContain("URL;TYPE=WEBSITE:https://atelier.example");
     expect(card).not.toContain("insecure.example");
     expect(card).not.toMatch(/EMAIL|TEL/);
     expect(card.endsWith("END:VCARD\r\n")).toBe(true);

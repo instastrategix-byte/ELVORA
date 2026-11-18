@@ -7,8 +7,9 @@ import type { DbClient } from "@backend/db/server";
 import type { Viewer } from "@backend/modules/auth/permissions";
 import { throwIfError, unwrap } from "@backend/http/db-errors";
 import { assertOwnedPath } from "@backend/modules/storage/service";
+import { linkUrlError } from "./links";
 import type { MemberSearch } from "./schemas";
-import type { experienceSchema, experienceUpdateSchema, profileUpdateSchema, privacyUpdateSchema } from "./schemas";
+import type { addLinkSchema, experienceSchema, experienceUpdateSchema, profileUpdateSchema, privacyUpdateSchema, updateLinkSchema } from "./schemas";
 import type { z } from "zod";
 import {
   OPEN_TO,
@@ -16,6 +17,7 @@ import {
   type Experience,
   type OpenTo,
   type ProfileDetail,
+  type ProfileLink,
   type ProfileSummary,
   type Relationship,
 } from "./types";
@@ -101,15 +103,16 @@ export async function getProfileByHandle(db: DbClient, handle: string): Promise<
     await db
       .from("profiles")
       .select(
-        "id, handle, display_name, headline, location, avatar_path, cover_path, verified_kinds, bio, job_title, company, industry, website, interests, profile_visibility, created_at, member_type, skills, open_to, achievements, linkedin_url, x_url, instagram_url",
+        "id, handle, display_name, headline, location, avatar_path, cover_path, verified_kinds, bio, job_title, company, industry, interests, profile_visibility, created_at, member_type, skills, open_to, achievements",
       )
       .eq("handle", handle.toLowerCase())
       .maybeSingle(),
   );
   if (!row) return null;
-  const [businessRes, experiences] = await Promise.all([
+  const [businessRes, experiences, links] = await Promise.all([
     db.from("businesses").select("id").eq("owner_id", row.id).eq("status", "approved").limit(1),
     listExperiences(db, row.id),
+    listLinks(db, row.id),
   ]);
   const business = unwrap(businessRes);
   return {
@@ -118,7 +121,7 @@ export async function getProfileByHandle(db: DbClient, handle: string): Promise<
     jobTitle: row.job_title,
     company: row.company,
     industry: row.industry,
-    website: row.website,
+    website: links.find((l) => l.platform === "website")?.url ?? null,
     interests: row.interests,
     coverUrl: publicMediaUrl("profile-media", row.cover_path),
     profileVisibility: row.profile_visibility,
@@ -128,7 +131,7 @@ export async function getProfileByHandle(db: DbClient, handle: string): Promise<
     skills: row.skills,
     openTo: toOpenTo(row.open_to),
     achievements: row.achievements,
-    socialLinks: { website: row.website, linkedin: row.linkedin_url, x: row.x_url, instagram: row.instagram_url },
+    links,
     experiences,
   };
 }
@@ -190,15 +193,11 @@ export async function updateProfile(db: DbClient, viewer: Viewer, input: z.infer
     company: input.company,
     industry: input.industry,
     location: input.location,
-    website: input.website,
     interests: input.interests,
     member_type: input.memberType,
     skills: input.skills,
     open_to: input.openTo,
     achievements: input.achievements,
-    linkedin_url: input.linkedinUrl,
-    x_url: input.xUrl,
-    instagram_url: input.instagramUrl,
     avatar_path: input.avatarPath,
     cover_path: input.coverPath,
   };
@@ -263,6 +262,7 @@ export async function updatePrivacy(db: DbClient, viewer: Viewer, input: z.infer
         profile_visibility: input.profileVisibility,
         discoverable: input.discoverable,
         messaging_policy: input.messagingPolicy,
+        ...(input.showReadReceipts === undefined ? {} : { show_read_receipts: input.showReadReceipts }),
       })
       .eq("id", viewer.id),
   );
@@ -308,4 +308,78 @@ export async function searchMembers(db: DbClient, viewer: Viewer | null, search:
   const rows = unwrap(await query);
   const page = toPage(rows, SEARCH_PAGE, (r) => ({ t: r.created_at, id: r.id }));
   return { items: page.items.map(toSummary), nextCursor: page.nextCursor };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Profile links
+// ---------------------------------------------------------------------------------------------
+
+const LINK_COLUMNS = "id, platform, url, label, visibility, position";
+
+type LinkRow = {
+  id: string;
+  platform: ProfileLink["platform"];
+  url: string;
+  label: string | null;
+  visibility: ProfileLink["visibility"];
+  position: number;
+};
+const toLink = (r: LinkRow): ProfileLink => ({ id: r.id, platform: r.platform, url: r.url, label: r.label, visibility: r.visibility, position: r.position });
+
+/** Links on a profile that the current viewer may see (RLS decides; nothing is filtered client-side). */
+export async function listLinks(db: DbClient, profileId: string): Promise<ProfileLink[]> {
+  const rows = unwrap(await db.from("profile_links").select(LINK_COLUMNS).eq("profile_id", profileId).order("position").order("created_at"));
+  return (rows as LinkRow[]).map(toLink);
+}
+
+function throwLinkError(error: { code?: string } | null) {
+  if (!error) return;
+  if (error.code === "23505") {
+    throw new AppError("conflict", "You've already added that platform. Edit the existing link instead.", { platform: ["Already added"] });
+  }
+  if (error.code === "54000") throw new AppError("business_rule", "You can add up to 12 links.");
+  if (error.code === "23514") throw new AppError("validation_failed", "That link isn't valid for this platform.", { url: ["That link isn't valid for this platform"] });
+  throwIfError(error as Parameters<typeof throwIfError>[0]);
+}
+
+export async function addLink(db: DbClient, viewer: Viewer, input: z.infer<typeof addLinkSchema>): Promise<ProfileLink> {
+  const { data, error } = await db
+    .from("profile_links")
+    .insert({ profile_id: viewer.id, platform: input.platform, url: input.url, label: input.label ?? null, visibility: input.visibility })
+    .select(LINK_COLUMNS)
+    .single();
+  throwLinkError(error);
+  return toLink(data as LinkRow);
+}
+
+export async function updateLink(db: DbClient, viewer: Viewer, id: string, input: z.infer<typeof updateLinkSchema>): Promise<ProfileLink> {
+  const current = unwrap(await db.from("profile_links").select(LINK_COLUMNS).eq("id", id).eq("profile_id", viewer.id).maybeSingle()) as LinkRow | null;
+  if (!current) throw new AppError("not_found", "Link not found.");
+  if (input.url !== undefined) {
+    const problem = linkUrlError(current.platform, input.url);
+    if (problem) throw new AppError("validation_failed", problem, { url: [problem] });
+  }
+  if (current.platform === "other" && input.label === null) throw new AppError("validation_failed", "Give this link a short name.", { label: ["Required"] });
+  const patch: { url?: string; label?: string | null; visibility?: ProfileLink["visibility"] } = {};
+  if (input.url !== undefined) patch.url = input.url;
+  if (input.label !== undefined) patch.label = input.label;
+  if (input.visibility !== undefined) patch.visibility = input.visibility;
+  const { data, error } = await db.from("profile_links").update(patch).eq("id", id).eq("profile_id", viewer.id).select(LINK_COLUMNS).maybeSingle();
+  throwLinkError(error);
+  if (!data) throw new AppError("not_found", "Link not found.");
+  return toLink(data as LinkRow);
+}
+
+export async function removeLink(db: DbClient, viewer: Viewer, id: string): Promise<void> {
+  const rows = unwrap(await db.from("profile_links").delete().eq("id", id).eq("profile_id", viewer.id).select("id"));
+  if (rows.length === 0) throw new AppError("not_found", "Link not found.");
+}
+
+/** Sets the display order to the given id sequence; ids the viewer doesn't own are ignored. */
+export async function reorderLinks(db: DbClient, viewer: Viewer, ids: string[]): Promise<ProfileLink[]> {
+  const unique = [...new Set(ids)];
+  for (const [position, id] of unique.entries()) {
+    throwIfError((await db.from("profile_links").update({ position }).eq("id", id).eq("profile_id", viewer.id)).error);
+  }
+  return listLinks(db, viewer.id);
 }

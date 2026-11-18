@@ -33,7 +33,8 @@ const SUPABASE_STUBS = `
   );
   create table storage.objects (
     id uuid primary key default gen_random_uuid(),
-    bucket_id text references storage.buckets (id), name text not null, owner uuid
+    bucket_id text references storage.buckets (id), name text not null, owner uuid,
+    metadata jsonb, created_at timestamptz not null default now()
   );
   alter table storage.objects enable row level security;
   create function storage.foldername(name text) returns text[] language sql immutable as $$
@@ -75,10 +76,12 @@ export function migrationFiles(): string[] {
     .sort();
 }
 
-export async function createMigratedDb(): Promise<PGlite> {
+/** Applies every migration, or only those whose file name sorts before `until` (to test data migrations). */
+export async function createMigratedDb(opts: { until?: string } = {}): Promise<PGlite> {
   const db = new PGlite();
   await db.exec(SUPABASE_STUBS);
   for (const file of migrationFiles()) {
+    if (opts.until && file >= opts.until) break;
     const sql = readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");
     try {
       await db.exec(sql);

@@ -1,10 +1,11 @@
-import { Award, AtSign, Briefcase, Camera, Globe, Link2, Lock, MapPin, Pencil, Sparkles } from "lucide-react";
+import { Award, Briefcase, Lock, MapPin, Pencil, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ServiceNotice } from "@/components/feedback/service-notice";
 import { PostList } from "@/components/feed/post-list";
+import { PlatformIcon } from "@/components/profile/platform-icons";
 import { BusinessCardActions, ProfileViewBeacon, RequestIntroductionButton } from "@/components/profile/profile-extras";
 import { ProfileActions } from "@/components/social/profile-actions";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { formatDate, titleCase } from "@/lib/format";
 import { createClient } from "@backend/db/server";
 import { hasFeature } from "@backend/modules/auth/permissions";
 import { listAuthorPosts } from "@backend/modules/feed/service";
+import { PLATFORMS, linkDisplay } from "@backend/modules/profiles/links";
 import { getProfileByHandle, getRelationship } from "@backend/modules/profiles/service";
 import { MEMBER_TYPE_LABELS, OPEN_TO_LABELS, type ProfileDetail } from "@backend/modules/profiles/types";
 import { getSession } from "@backend/auth/viewer";
@@ -144,7 +146,7 @@ async function Profile({ params }: { params: Params }) {
                 ) : null}
                 <li>Member since {formatDate(profile.memberSince)}</li>
               </ul>
-              <SocialLinks links={profile.socialLinks} />
+              <SocialLinks links={profile.links} />
               {isSelf ? (
                 <p className="flex items-center gap-1.5 text-xs text-muted">
                   <Lock className="size-3.5" aria-hidden="true" /> Visible to: {titleCase(profile.profileVisibility)}.{" "}
@@ -269,28 +271,29 @@ function ProfileSection({ title, children }: { title: string; children: React.Re
   );
 }
 
-function SocialLinks({ links }: { links: ProfileDetail["socialLinks"] }) {
-  const items = [
-    { href: links.website, label: "Website", icon: Globe },
-    { href: links.linkedin, label: "LinkedIn", icon: Link2 },
-    { href: links.x, label: "X", icon: AtSign },
-    { href: links.instagram, label: "Instagram", icon: Camera },
-  ].filter((i): i is typeof i & { href: string } => Boolean(i.href));
-  if (items.length === 0) return null;
+function SocialLinks({ links }: { links: ProfileDetail["links"] }) {
+  // `links` already contains only what this viewer may see (RLS on profile_links).
+  if (links.length === 0) return null;
   return (
     <ul className="flex flex-wrap gap-2" aria-label="Links">
-      {items.map(({ href, label, icon: Icon }) => (
-        <li key={label}>
-          <a
-            href={href}
-            rel="noopener noreferrer nofollow"
-            target="_blank"
-            className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-muted transition-colors hover:border-accent hover:text-fg"
-          >
-            <Icon className="size-3.5" aria-hidden="true" /> {label}
-          </a>
-        </li>
-      ))}
+      {links.map((link) => {
+        const name = link.platform === "other" ? (link.label ?? "Link") : PLATFORMS[link.platform].label;
+        const shown = linkDisplay(link.url);
+        return (
+          <li key={link.id}>
+            <a
+              href={link.url}
+              rel="noopener noreferrer nofollow me"
+              target="_blank"
+              title={`${name}: ${shown}`}
+              aria-label={`${name}: ${shown} (opens in a new tab)`}
+              className="group inline-flex size-10 items-center justify-center rounded-full border border-border bg-surface text-muted transition-[color,border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-accent hover:text-accent focus-visible:border-accent"
+            >
+              <PlatformIcon platform={link.platform} size={18} />
+            </a>
+          </li>
+        );
+      })}
     </ul>
   );
 }

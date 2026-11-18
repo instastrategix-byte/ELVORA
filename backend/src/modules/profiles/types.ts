@@ -1,3 +1,4 @@
+import type { LinkPlatform, LinkVisibility } from "./links";
 import type { VerificationKind } from "@backend/modules/auth/permissions";
 
 export type ProfileSummary = {
@@ -32,7 +33,8 @@ export type ProfileDetail = ProfileSummary & {
   skills: string[];
   openTo: OpenTo[];
   achievements: string[];
-  socialLinks: SocialLinks;
+  /** Only the links the viewer may see (filtered by RLS on the server). */
+  links: ProfileLink[];
   experiences: Experience[];
 };
 
@@ -61,7 +63,14 @@ export const OPEN_TO_LABELS: Record<OpenTo, string> = {
   introductions: "Introductions",
 };
 
-export type SocialLinks = { website: string | null; linkedin: string | null; x: string | null; instagram: string | null };
+export type ProfileLink = {
+  id: string;
+  platform: LinkPlatform;
+  url: string;
+  label: string | null;
+  visibility: LinkVisibility;
+  position: number;
+};
 
 export type Experience = {
   id: string;

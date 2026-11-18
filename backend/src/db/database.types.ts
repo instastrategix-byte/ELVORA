@@ -6,6 +6,12 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      message_reactions: {
+        Row: { message_id: string; user_id: string; emoji: string; created_at: string };
+        Insert: { message_id: string; user_id: string; emoji: string; created_at?: string };
+        Update: { message_id?: string; user_id?: string; emoji?: string; created_at?: string };
+        Relationships: [];
+      };
       collections: {
         Row: { id: string; owner_id: string; name: string; created_at: string; updated_at: string };
         Insert: { name: string; id?: string; owner_id?: string; created_at?: string; updated_at?: string };
@@ -1036,6 +1042,7 @@ export type Database = {
           body: string;
           client_id: string;
           created_at: string;
+          has_attachments: boolean;
         };
         Insert: {
           id?: string;
@@ -1053,6 +1060,25 @@ export type Database = {
           client_id?: string;
           created_at?: string;
         };
+        Relationships: [];
+      };
+      message_attachments: {
+        Row: {
+          id: string;
+          message_id: string;
+          conversation_id: string;
+          storage_path: string;
+          file_name: string;
+          mime_type: string;
+          size_bytes: number;
+          kind: string;
+          width: number | null;
+          height: number | null;
+          position: number;
+          created_at: string;
+        };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
         Relationships: [];
       };
       moderation_actions: {
@@ -1448,6 +1474,7 @@ export type Database = {
           profile_visibility: Database["public"]["Enums"]["visibility"];
           discoverable: boolean;
           messaging_policy: Database["public"]["Enums"]["messaging_policy"];
+          show_read_receipts: boolean;
           verified_kinds: Database["public"]["Enums"]["verification_kind"][];
           account_status: Database["public"]["Enums"]["account_status"];
           onboarding_completed_at: string | null;
@@ -1485,6 +1512,7 @@ export type Database = {
           profile_visibility?: Database["public"]["Enums"]["visibility"];
           discoverable?: boolean;
           messaging_policy?: Database["public"]["Enums"]["messaging_policy"];
+          show_read_receipts?: boolean;
           verified_kinds?: Database["public"]["Enums"]["verification_kind"][];
           account_status?: Database["public"]["Enums"]["account_status"];
           onboarding_completed_at?: string | null;
@@ -1515,11 +1543,41 @@ export type Database = {
           profile_visibility?: Database["public"]["Enums"]["visibility"];
           discoverable?: boolean;
           messaging_policy?: Database["public"]["Enums"]["messaging_policy"];
+          show_read_receipts?: boolean;
           verified_kinds?: Database["public"]["Enums"]["verification_kind"][];
           account_status?: Database["public"]["Enums"]["account_status"];
           onboarding_completed_at?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      profile_links: {
+        Row: {
+          id: string;
+          profile_id: string;
+          platform: Database["public"]["Enums"]["profile_link_platform"];
+          url: string;
+          label: string | null;
+          visibility: Database["public"]["Enums"]["visibility"];
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          platform: Database["public"]["Enums"]["profile_link_platform"];
+          url: string;
+          label?: string | null;
+          visibility?: Database["public"]["Enums"]["visibility"];
+          position?: number;
+          created_at?: string;
+        };
+        Update: {
+          url?: string;
+          label?: string | null;
+          visibility?: Database["public"]["Enums"]["visibility"];
+          position?: number;
         };
         Relationships: [];
       };
@@ -1880,6 +1938,10 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: undefined;
       };
+      conversation_read_state: {
+        Args: { p_conversation: string };
+        Returns: { user_id: string; last_read_at: string | null; receipts_visible: boolean; is_self: boolean }[];
+      };
       conversation_summaries: {
         Args: { p_limit?: number; p_before?: string };
         Returns: { conversation_id: string | null; other_user_id: string | null; last_message_at: string | null; last_message_body: string | null; last_message_sender: string | null; unread_count: number | null }[];
@@ -1969,6 +2031,8 @@ export type Database = {
         Returns: boolean;
       };
       introduction_paths: { Args: { p_target: string }; Returns: string[] };
+      can_view_profile_link: { Args: { p_profile: string; p_visibility: Database["public"]["Enums"]["visibility"] }; Returns: boolean };
+      profile_link_url_ok: { Args: { p_platform: Database["public"]["Enums"]["profile_link_platform"]; p_url: string }; Returns: boolean };
       profile_view_stats: { Args: { p_days?: number }; Returns: { day: string; views: number }[] };
       record_profile_view: { Args: { p_profile: string }; Returns: undefined };
       request_introduction: { Args: { p_introducer: string; p_target: string; p_message: string }; Returns: string };
@@ -2014,6 +2078,10 @@ export type Database = {
         }[];
       };
       vote_poll: { Args: { p_post: string; p_options: string[] }; Returns: undefined };
+      send_message_with_attachments: {
+        Args: { p_conversation: string; p_client_id: string; p_body: string; p_attachments: Json };
+        Returns: string;
+      };
       record_ad_click: {
         Args: { p_impression: string };
         Returns: { destination_url: string | null; listing_id: string | null }[];
@@ -2119,6 +2187,7 @@ export type Database = {
       media_type: "image" | "video";
       messaging_policy: "connections" | "members" | "nobody";
       moderation_action_type: "hide_content" | "remove_content" | "restore_content" | "warn" | "suspend" | "reinstate";
+      profile_link_platform: "instagram" | "linkedin" | "x" | "facebook" | "youtube" | "tiktok" | "pinterest" | "github" | "website" | "other";
       introduction_status: "pending" | "forwarded" | "accepted" | "declined" | "withdrawn";
       opportunity_kind: "investment" | "partnership" | "hiring" | "board_seat" | "advisory" | "acquisition" | "other";
       opportunity_visibility: "members" | "connections";

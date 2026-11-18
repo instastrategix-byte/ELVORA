@@ -30,15 +30,11 @@ export type ProfileFormValues = {
   company: string | null;
   industry: string | null;
   location: string | null;
-  website: string | null;
   interests: string[];
   memberType: MemberType | null;
   skills: string[];
   openTo: string[];
   achievements: string[];
-  linkedinUrl: string | null;
-  xUrl: string | null;
-  instagramUrl: string | null;
   avatarUrl: string | null;
   coverUrl: string | null;
 };
@@ -63,7 +59,6 @@ export function ProfileForm({ initial }: { initial: ProfileFormValues }) {
       company: text("company"),
       industry: text("industry"),
       location: text("location"),
-      website: text("website"),
       interests: splitList(text("interests"), 20),
       memberType: text("memberType"),
       skills: splitList(text("skills"), 30),
@@ -73,9 +68,6 @@ export function ProfileForm({ initial }: { initial: ProfileFormValues }) {
         .filter(Boolean)
         .slice(0, 10),
       openTo: f.getAll("openTo").map(String),
-      linkedinUrl: text("linkedinUrl"),
-      xUrl: text("xUrl"),
-      instagramUrl: text("instagramUrl"),
       ...(avatarPath !== undefined ? { avatarPath } : {}),
       ...(coverPath !== undefined ? { coverPath } : {}),
     };
@@ -141,9 +133,6 @@ export function ProfileForm({ initial }: { initial: ProfileFormValues }) {
         <Field id="location" label="Location" error={fe.location}>
           {(a) => <Input name="location" defaultValue={initial.location ?? ""} maxLength={120} {...a} />}
         </Field>
-        <Field id="website" label="Website" error={fe.website} hint="Must start with https://" className="sm:col-span-2">
-          {(a) => <Input name="website" type="url" defaultValue={initial.website ?? ""} placeholder="https://" {...a} />}
-        </Field>
         <Field id="skills" label="Skills and expertise" error={fe.skills} hint="Comma-separated, up to 30." className="sm:col-span-2">
           {(a) => <Input name="skills" defaultValue={initial.skills.join(", ")} placeholder="Private equity, Brand strategy, Hospitality" {...a} />}
         </Field>
@@ -173,18 +162,6 @@ export function ProfileForm({ initial }: { initial: ProfileFormValues }) {
           </div>
         </fieldset>
         {fe.openTo ? <p className="text-xs text-danger" role="alert">{fe.openTo[0]}</p> : null}
-      </Card>
-      <Card className="grid gap-5 p-6 sm:grid-cols-3">
-        <h2 className="display text-2xl sm:col-span-3">Social links</h2>
-        <Field id="linkedinUrl" label="LinkedIn" error={fe.linkedinUrl}>
-          {(a) => <Input name="linkedinUrl" type="url" defaultValue={initial.linkedinUrl ?? ""} placeholder="https://linkedin.com/in/…" {...a} />}
-        </Field>
-        <Field id="xUrl" label="X" error={fe.xUrl}>
-          {(a) => <Input name="xUrl" type="url" defaultValue={initial.xUrl ?? ""} placeholder="https://x.com/…" {...a} />}
-        </Field>
-        <Field id="instagramUrl" label="Instagram" error={fe.instagramUrl}>
-          {(a) => <Input name="instagramUrl" type="url" defaultValue={initial.instagramUrl ?? ""} placeholder="https://instagram.com/…" {...a} />}
-        </Field>
       </Card>
       <div className="flex justify-end gap-3">
         <Button variant="ghost" onClick={() => router.back()}>

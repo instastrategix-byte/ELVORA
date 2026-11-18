@@ -23,6 +23,7 @@ export default async function SettingsPage() {
           profileVisibility: data.profile.profile_visibility,
           discoverable: data.profile.discoverable,
           messagingPolicy: data.profile.messaging_policy,
+          showReadReceipts: data.profile.show_read_receipts,
         }}
       />
       <NotificationPrefsForm initial={data.prefs} />

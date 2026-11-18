@@ -34,7 +34,12 @@ function Toggle({ id, label, description, checked, onChange }: { id: string; lab
 export function PrivacyForm({
   initial,
 }: {
-  initial: { profileVisibility: "public" | "members" | "connections"; discoverable: boolean; messagingPolicy: "connections" | "members" | "nobody" };
+  initial: {
+    profileVisibility: "public" | "members" | "connections";
+    discoverable: boolean;
+    messagingPolicy: "connections" | "members" | "nobody";
+    showReadReceipts: boolean;
+  };
 }) {
   const [values, setValues] = useState(initial);
   const action = useAction((body: unknown) => api("/api/v1/profile/privacy", { method: "PUT", body }));
@@ -76,6 +81,13 @@ export function PrivacyForm({
           description="When off, people can still reach your profile by its link, subject to the visibility above."
           checked={values.discoverable}
           onChange={(v) => setValues({ ...values, discoverable: v })}
+        />
+        <Toggle
+          id="receipts"
+          label="Read receipts"
+          description="Let people see when you've read their messages. This works both ways: if you turn it off, you won't see when others have read yours either."
+          checked={values.showReadReceipts}
+          onChange={(v) => setValues({ ...values, showReadReceipts: v })}
         />
         <Button type="submit" disabled={action.pending}>
           {action.pending ? "Saving…" : "Save privacy settings"}

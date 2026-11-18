@@ -270,10 +270,11 @@ describe("messaging", () => {
       ]),
     );
     const receipt = await asUser(db, CARA, (tx) =>
-      tx.query<{ last_read_at: string | null }>(
-        `select last_read_at from public.conversation_participants where conversation_id = $1 and user_id = $2`,
-        [conversationId, ALICE],
-      ),
+      // Read state is exposed through conversation_read_state (reciprocal read-receipt privacy).
+      tx.query<{ last_read_at: string | null }>(`select last_read_at from public.conversation_read_state($1) where user_id = $2`, [
+        conversationId,
+        ALICE,
+      ]),
     );
     expect(receipt.rows[0]!.last_read_at).not.toBeNull();
     await expect(
