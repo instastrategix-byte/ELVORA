@@ -54,6 +54,44 @@ export class StripeProvider implements PaymentProvider {
     return { url: session.url };
   }
 
+  /**
+   * One-time Checkout for an advertising balance top-up. Card details stay with Stripe; the
+   * balance is credited only when the signed webhook reports the session as paid.
+   */
+  async createTopUpCheckout(req: {
+    accountId: string;
+    userId: string;
+    email: string | null;
+    amountMinor: number;
+    currency: string;
+    successUrl: string;
+    cancelUrl: string;
+  }): Promise<{ url: string }> {
+    const metadata = { kind: "ad_topup", account_id: req.accountId, amount_minor: String(req.amountMinor), user_id: req.userId };
+    const session = await this.stripe().checkout.sessions.create({
+      mode: "payment",
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: req.currency.toLowerCase(),
+            unit_amount: req.amountMinor,
+            product_data: { name: "ELVORA advertising balance" },
+          },
+        },
+      ],
+      client_reference_id: req.accountId,
+      ...(req.email ? { customer_email: req.email } : {}),
+      metadata,
+      payment_intent_data: { metadata, description: "ELVORA advertising balance top-up" },
+      success_url: req.successUrl,
+      cancel_url: req.cancelUrl,
+      locale: "auto",
+    });
+    if (!session.url) throw new AppError("payment_failed", "Checkout could not be started.");
+    return { url: session.url };
+  }
+
   async fetchSubscription(id: string): Promise<ProviderSubscription> {
     const sub = await this.stripe().subscriptions.retrieve(id);
     const item = sub.items.data[0];
@@ -92,10 +130,25 @@ export class StripeProvider implements PaymentProvider {
       case "customer.subscription.paused":
       case "customer.subscription.resumed":
         return { eventId: event.id, type: event.type, subscriptionId: event.data.object.id };
-      case "checkout.session.completed": {
+      case "checkout.session.completed":
+      case "checkout.session.async_payment_succeeded":
+      case "checkout.session.async_payment_failed": {
         const s = event.data.object;
+        if (s.metadata?.kind === "ad_topup") return { eventId: event.id, type: event.type, ...adTopUpFromSession(event.type, s) };
+        if (event.type !== "checkout.session.completed") return { eventId: event.id, type: event.type };
         const subId = typeof s.subscription === "string" ? s.subscription : s.subscription?.id;
         return { eventId: event.id, type: event.type, subscriptionId: subId ?? undefined };
+      }
+      case "charge.refunded": {
+        const ch = event.data.object;
+        const pi = typeof ch.payment_intent === "string" ? ch.payment_intent : ch.payment_intent?.id;
+        if (!pi) return { eventId: event.id, type: event.type };
+        return { eventId: event.id, type: event.type, adRefund: { paymentIntentId: pi, chargeId: ch.id, refundedTotalMinor: ch.amount_refunded } };
+      }
+      case "payment_intent.payment_failed": {
+        const pi = event.data.object;
+        const accountId = pi.metadata?.kind === "ad_topup" ? pi.metadata.account_id : undefined;
+        return accountId ? { eventId: event.id, type: event.type, adPaymentFailed: { accountId } } : { eventId: event.id, type: event.type };
       }
       case "invoice.paid":
       case "invoice.payment_failed": {
@@ -123,4 +176,17 @@ export class StripeProvider implements PaymentProvider {
         return { eventId: event.id, type: event.type };
     }
   }
+}
+
+/** Maps a top-up Checkout Session event to ledger instructions. Amount and currency come from Stripe, not metadata. */
+export function adTopUpFromSession(
+  type: string,
+  s: { id: string; payment_status: string; amount_total: number | null; currency: string | null; metadata?: Record<string, string> | null; payment_intent?: string | { id: string } | null },
+): Pick<WebhookEvent, "adTopUp" | "adPaymentFailed"> {
+  const accountId = s.metadata?.account_id;
+  if (!accountId) return {};
+  if (type === "checkout.session.async_payment_failed") return { adPaymentFailed: { accountId } };
+  if (s.payment_status !== "paid" || !s.amount_total || !s.currency) return {};
+  const pi = typeof s.payment_intent === "string" ? s.payment_intent : (s.payment_intent?.id ?? null);
+  return { adTopUp: { sessionId: s.id, accountId, amountMinor: s.amount_total, currency: s.currency.toUpperCase(), paymentIntentId: pi } };
 }

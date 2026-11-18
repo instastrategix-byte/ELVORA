@@ -6,6 +6,48 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      ad_transactions: {
+        Row: { id: string; account_id: string; kind: "top_up" | "spend" | "refund" | "adjustment" | "credit" | "reversal"; amount_minor: number; currency: string; description: string | null; provider: string | null; provider_ref: string | null; idempotency_key: string; created_by: string | null; created_at: string; updated_at: string };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      ad_daily_spend: {
+        Row: { account_id: string; day: string; currency: string; cost_milli: number };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      ad_invoices: {
+        Row: { id: string; account_id: string; period_start: string; period_end: string; opening_balance_minor: number; top_ups_minor: number; spend_minor: number; adjustments_minor: number; closing_balance_minor: number; currency: string; number: string; issued_at: string };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      ad_billing_settings: {
+        Row: { currency: string; min_top_up_minor: number; max_top_up_minor: number; active: boolean; updated_at: string };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      ad_tracking_integrations: {
+        Row: { id: string; account_id: string; name: string; kind: "pixel" | "server"; public_key: string; secret_hash: string | null; allowed_domains: string[]; attribution_window_days: number; verified_at: string | null; last_event_at: string | null; created_by: string | null; created_at: string };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      ad_conversions: {
+        Row: { id: string; integration_id: string; account_id: string; event_name: "lead" | "purchase" | "sign_up" | "page_view" | "custom"; custom_name: string | null; event_id: string; click_id: string | null; attributed: boolean; ad_id: string | null; ad_set_id: string | null; campaign_id: string | null; value_minor: number | null; currency: string | null; page_url: string | null; consent: boolean; occurred_at: string; received_at: string };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      ad_tracking_diagnostics: {
+        Row: { id: number; integration_id: string; level: "info" | "warning" | "error"; code: string; message: string; created_at: string };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
       message_reactions: {
         Row: { message_id: string; user_id: string; emoji: string; created_at: string };
         Insert: { message_id: string; user_id: string; emoji: string; created_at?: string };
@@ -146,6 +188,300 @@ export type Database = {
         };
         Relationships: [];
       };
+      ad_appeals: {
+        Row: {
+          id: string;
+          review_id: string;
+          account_id: string;
+          message: string;
+          status: string;
+          submitted_by: string | null;
+          resolved_by: string | null;
+          resolution_note: string | null;
+          created_at: string;
+          resolved_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          review_id: string;
+          account_id: string;
+          message: string;
+          status?: string;
+          submitted_by?: string | null;
+          resolved_by?: string | null;
+          resolution_note?: string | null;
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          review_id?: string;
+          account_id?: string;
+          message?: string;
+          status?: string;
+          submitted_by?: string | null;
+          resolved_by?: string | null;
+          resolution_note?: string | null;
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+        Relationships: [];
+      };
+      ad_audiences: {
+        Row: {
+          id: string;
+          account_id: string;
+          name: string;
+          kind: string;
+          definition: Json;
+          version: number;
+          previous_versions: Json[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          account_id: string;
+          name: string;
+          kind: string;
+          definition?: Json;
+          version?: number;
+          previous_versions?: Json[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          account_id?: string;
+          name?: string;
+          kind?: string;
+          definition?: Json;
+          version?: number;
+          previous_versions?: Json[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      ad_creatives: {
+        Row: {
+          id: string;
+          account_id: string;
+          name: string;
+          format: string;
+          primary_text: string | null;
+          headline: string | null;
+          description: string | null;
+          cta: string;
+          destination_url: string | null;
+          url_params: string | null;
+          media: Json;
+          post_id: string | null;
+          listing_id: string | null;
+          event_id: string | null;
+          business_id: string | null;
+          review_status: Database["public"]["Enums"]["ad_review_status"];
+          review_note: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          account_id: string;
+          name: string;
+          format: string;
+          primary_text?: string | null;
+          headline?: string | null;
+          description?: string | null;
+          cta?: string;
+          destination_url?: string | null;
+          url_params?: string | null;
+          media?: Json;
+          post_id?: string | null;
+          listing_id?: string | null;
+          event_id?: string | null;
+          business_id?: string | null;
+          review_status?: Database["public"]["Enums"]["ad_review_status"];
+          review_note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          account_id?: string;
+          name?: string;
+          format?: string;
+          primary_text?: string | null;
+          headline?: string | null;
+          description?: string | null;
+          cta?: string;
+          destination_url?: string | null;
+          url_params?: string | null;
+          media?: Json;
+          post_id?: string | null;
+          listing_id?: string | null;
+          event_id?: string | null;
+          business_id?: string | null;
+          review_status?: Database["public"]["Enums"]["ad_review_status"];
+          review_note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      ad_reviews: {
+        Row: {
+          id: string;
+          entity_type: string;
+          entity_id: string;
+          account_id: string;
+          decision: string;
+          reasons: string[];
+          note: string | null;
+          reviewer_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          entity_type: string;
+          entity_id: string;
+          account_id: string;
+          decision: string;
+          reasons?: string[];
+          note?: string | null;
+          reviewer_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          entity_type?: string;
+          entity_id?: string;
+          account_id?: string;
+          decision?: string;
+          reasons?: string[];
+          note?: string | null;
+          reviewer_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      ad_sets: {
+        Row: {
+          id: string;
+          campaign_id: string;
+          account_id: string;
+          name: string;
+          status: Database["public"]["Enums"]["ad_entity_status"];
+          placements: string[];
+          targeting: Json;
+          bid_strategy: string;
+          bid_minor: number | null;
+          daily_budget_minor: number | null;
+          frequency_cap_per_day: number;
+          starts_at: string | null;
+          ends_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          campaign_id: string;
+          account_id?: string;
+          name: string;
+          status?: Database["public"]["Enums"]["ad_entity_status"];
+          placements: string[];
+          targeting?: Json;
+          bid_strategy?: string;
+          bid_minor?: number | null;
+          daily_budget_minor?: number | null;
+          frequency_cap_per_day?: number;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          campaign_id?: string;
+          account_id?: string;
+          name?: string;
+          status?: Database["public"]["Enums"]["ad_entity_status"];
+          placements?: string[];
+          targeting?: Json;
+          bid_strategy?: string;
+          bid_minor?: number | null;
+          daily_budget_minor?: number | null;
+          frequency_cap_per_day?: number;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      advertisements: {
+        Row: {
+          id: string;
+          ad_set_id: string;
+          campaign_id: string;
+          account_id: string;
+          creative_id: string;
+          name: string;
+          status: Database["public"]["Enums"]["ad_entity_status"];
+          review_status: Database["public"]["Enums"]["ad_review_status"];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          ad_set_id: string;
+          campaign_id?: string;
+          account_id?: string;
+          creative_id: string;
+          name: string;
+          status?: Database["public"]["Enums"]["ad_entity_status"];
+          review_status?: Database["public"]["Enums"]["ad_review_status"];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          ad_set_id?: string;
+          campaign_id?: string;
+          account_id?: string;
+          creative_id?: string;
+          name?: string;
+          status?: Database["public"]["Enums"]["ad_entity_status"];
+          review_status?: Database["public"]["Enums"]["ad_review_status"];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      advertiser_members: {
+        Row: {
+          account_id: string;
+          user_id: string;
+          role: Database["public"]["Enums"]["ad_member_role"];
+          added_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          account_id: string;
+          user_id: string;
+          role: Database["public"]["Enums"]["ad_member_role"];
+          added_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          account_id?: string;
+          user_id?: string;
+          role?: Database["public"]["Enums"]["ad_member_role"];
+          added_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       ad_campaigns: {
         Row: {
           id: string;
@@ -159,7 +495,7 @@ export type Database = {
           total_budget_minor: number;
           starts_on: string;
           ends_on: string;
-          headline: string;
+          headline: string | null;
           body: string | null;
           destination_url: string | null;
           listing_id: string | null;
@@ -172,6 +508,12 @@ export type Database = {
           reviewed_by: string | null;
           submitted_at: string | null;
           created_at: string;
+          structure: string;
+          budget_type: string;
+          spend_cap_minor: number | null;
+          special_category: string;
+          archived_at: string | null;
+          suspended_at: string | null;
           updated_at: string;
         };
         Insert: {
@@ -186,7 +528,7 @@ export type Database = {
           total_budget_minor: number;
           starts_on: string;
           ends_on: string;
-          headline: string;
+          headline?: string | null;
           body?: string | null;
           destination_url?: string | null;
           listing_id?: string | null;
@@ -199,6 +541,12 @@ export type Database = {
           reviewed_by?: string | null;
           submitted_at?: string | null;
           created_at?: string;
+          structure?: string;
+          budget_type?: string;
+          spend_cap_minor?: number | null;
+          special_category?: string;
+          archived_at?: string | null;
+          suspended_at?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -213,7 +561,7 @@ export type Database = {
           total_budget_minor?: number;
           starts_on?: string;
           ends_on?: string;
-          headline?: string;
+          headline?: string | null;
           body?: string | null;
           destination_url?: string | null;
           listing_id?: string | null;
@@ -226,6 +574,12 @@ export type Database = {
           reviewed_by?: string | null;
           submitted_at?: string | null;
           created_at?: string;
+          structure?: string;
+          budget_type?: string;
+          spend_cap_minor?: number | null;
+          special_category?: string;
+          archived_at?: string | null;
+          suspended_at?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -239,6 +593,11 @@ export type Database = {
           impression_id: string | null;
           placement: string;
           cost_milli: number;
+          account_id: string | null;
+          ad_set_id: string | null;
+          ad_id: string | null;
+          creative_id: string | null;
+          dedupe_key: string | null;
           occurred_at: string;
         };
         Insert: {
@@ -249,6 +608,11 @@ export type Database = {
           impression_id?: string | null;
           placement: string;
           cost_milli?: number;
+          account_id?: string | null;
+          ad_set_id?: string | null;
+          ad_id?: string | null;
+          creative_id?: string | null;
+          dedupe_key?: string | null;
           occurred_at?: string;
         };
         Update: {
@@ -259,6 +623,11 @@ export type Database = {
           impression_id?: string | null;
           placement?: string;
           cost_milli?: number;
+          account_id?: string | null;
+          ad_set_id?: string | null;
+          ad_id?: string | null;
+          creative_id?: string | null;
+          dedupe_key?: string | null;
           occurred_at?: string;
         };
         Relationships: [];
@@ -295,6 +664,12 @@ export type Database = {
           billing_email: string | null;
           business_id: string | null;
           status: Database["public"]["Enums"]["advertiser_status"];
+          currency: string;
+          balance_minor: number;
+          spend_limit_minor: number | null;
+          billing_status: Database["public"]["Enums"]["ad_billing_status"];
+          timezone: string;
+          billing_mode: string;
           created_at: string;
           updated_at: string;
         };
@@ -305,6 +680,12 @@ export type Database = {
           billing_email?: string | null;
           business_id?: string | null;
           status?: Database["public"]["Enums"]["advertiser_status"];
+          currency?: string;
+          balance_minor?: number;
+          spend_limit_minor?: number | null;
+          billing_status?: Database["public"]["Enums"]["ad_billing_status"];
+          timezone?: string;
+          billing_mode?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -315,6 +696,12 @@ export type Database = {
           billing_email?: string | null;
           business_id?: string | null;
           status?: Database["public"]["Enums"]["advertiser_status"];
+          currency?: string;
+          balance_minor?: number;
+          spend_limit_minor?: number | null;
+          billing_status?: Database["public"]["Enums"]["ad_billing_status"];
+          timezone?: string;
+          billing_mode?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -1485,6 +1872,7 @@ export type Database = {
           linkedin_url: string | null;
           x_url: string | null;
           instagram_url: string | null;
+          ads_personalization: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -1516,6 +1904,7 @@ export type Database = {
           verified_kinds?: Database["public"]["Enums"]["verification_kind"][];
           account_status?: Database["public"]["Enums"]["account_status"];
           onboarding_completed_at?: string | null;
+          ads_personalization?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -1547,6 +1936,7 @@ export type Database = {
           verified_kinds?: Database["public"]["Enums"]["verification_kind"][];
           account_status?: Database["public"]["Enums"]["account_status"];
           onboarding_completed_at?: string | null;
+          ads_personalization?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -1886,6 +2276,59 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      add_ad_account_member: { Args: { p_account: string; p_user: string; p_role: Database["public"]["Enums"]["ad_member_role"] }; Returns: undefined };
+      set_ad_account_member_role: { Args: { p_account: string; p_user: string; p_role: Database["public"]["Enums"]["ad_member_role"] }; Returns: undefined };
+      remove_ad_account_member: { Args: { p_account: string; p_user: string }; Returns: undefined };
+      ad_account_role: { Args: { p_account: string }; Returns: Database["public"]["Enums"]["ad_member_role"] | null };
+      can_access_ad_account: { Args: { p_account: string; p_min: Database["public"]["Enums"]["ad_member_role"] }; Returns: boolean };
+      estimate_audience: { Args: { p_targeting: Json; p_account?: string | null }; Returns: number | null };
+      serve_ads_v2: {
+        Args: { p_placement: string; p_limit?: number };
+        Returns: {
+          impression_id: string;
+          ad_id: string | null;
+          campaign_id: string;
+          format: string;
+          primary_text: string | null;
+          headline: string | null;
+          description: string | null;
+          cta: string;
+          destination_url: string | null;
+          media: Json;
+          post_id: string | null;
+          listing_id: string | null;
+          event_id: string | null;
+          business_id: string | null;
+          advertiser_name: string;
+        }[];
+      };
+      record_ad_click_v2: {
+        Args: { p_impression: string };
+        Returns: { destination_url: string | null; listing_id: string | null; post_id: string | null; event_id: string | null; business_id: string | null }[];
+      };
+      submit_campaign_for_review: { Args: { p_campaign: string }; Returns: Database["public"]["Enums"]["campaign_status"] };
+      submit_ad_for_review: { Args: { p_ad: string }; Returns: undefined };
+      review_ad_campaign: { Args: { p_campaign: string; p_decision: string; p_reasons?: string[]; p_note?: string | null }; Returns: undefined };
+      review_ad: { Args: { p_ad: string; p_decision: string; p_reasons?: string[]; p_note?: string | null }; Returns: undefined };
+      set_ad_campaign_suspension: { Args: { p_campaign: string; p_suspend: boolean; p_reasons?: string[]; p_note?: string | null }; Returns: undefined };
+      set_ad_account_suspension: { Args: { p_account: string; p_suspend: boolean; p_reasons?: string[]; p_note?: string | null }; Returns: undefined };
+      appeal_ad_review: { Args: { p_review: string; p_message: string }; Returns: string };
+      resolve_ad_appeal: { Args: { p_appeal: string; p_overturn: boolean; p_note?: string | null }; Returns: undefined };
+      set_ad_campaign_state: { Args: { p_campaign: string; p_action: string }; Returns: undefined };
+      duplicate_ad_campaign: { Args: { p_campaign: string }; Returns: string };
+      ad_metrics: {
+        Args: { p_account: string; p_from: string; p_to: string; p_group: string; p_campaign?: string | null };
+        Returns: {
+          key: string;
+          label: string | null;
+          impressions: number;
+          reach: number;
+          clicks: number;
+          spend_minor: number;
+          conversions: number;
+          conversion_value_minor: number;
+        }[];
+      };
       are_connected: {
         Args: { p_a: string; p_b: string };
         Returns: boolean;
@@ -2082,6 +2525,51 @@ export type Database = {
         Args: { p_conversation: string; p_client_id: string; p_body: string; p_attachments: Json };
         Returns: string;
       };
+      ad_billing_overview: {
+        Args: { p_account: string };
+        Returns: {
+          currency: string;
+          balance_minor: number;
+          spend_limit_minor: number | null;
+          billing_status: string;
+          billing_mode: string;
+          spend_this_month_minor: number;
+          spend_today_minor: number;
+          min_top_up_minor: number | null;
+          max_top_up_minor: number | null;
+        }[];
+      };
+      ad_account_has_role: { Args: { p_account: string; p_min?: string }; Returns: boolean };
+      ad_record_top_up: { Args: { p_account: string; p_amount_minor: number; p_currency: string; p_session_id: string; p_payment_intent?: string | null }; Returns: boolean };
+      ad_record_refund: { Args: { p_payment_intent: string; p_charge_id: string; p_refunded_total: number }; Returns: boolean };
+      ad_mark_payment_failed: { Args: { p_account: string }; Returns: undefined };
+      ad_adjust_balance: { Args: { p_account: string; p_amount_minor: number; p_reason: string }; Returns: string };
+      ad_set_billing_status: { Args: { p_account: string; p_status: string; p_reason: string }; Returns: undefined };
+      generate_ad_statement: { Args: { p_account: string; p_month: string }; Returns: string };
+      create_ad_tracking_integration: {
+        Args: { p_account: string; p_name: string; p_kind: string; p_domains?: string[]; p_window?: number };
+        Returns: { integration_id: string; public_key: string; secret: string | null }[];
+      };
+      rotate_ad_tracking_secret: { Args: { p_integration: string }; Returns: string };
+      update_ad_tracking_integration: { Args: { p_integration: string; p_name: string; p_domains: string[]; p_window: number }; Returns: undefined };
+      delete_ad_tracking_integration: { Args: { p_integration: string }; Returns: undefined };
+      ingest_ad_conversion: {
+        Args: {
+          p_public_key: string;
+          p_event_name: string;
+          p_event_id: string;
+          p_consent: boolean;
+          p_origin_host?: string | null;
+          p_click_id?: string | null;
+          p_value_minor?: number | null;
+          p_currency?: string | null;
+          p_page_url?: string | null;
+          p_custom_name?: string | null;
+          p_occurred_at?: string | null;
+        };
+        Returns: string;
+      };
+      ad_tracking_signing_secret: { Args: { p_public_key: string }; Returns: string | null };
       record_ad_click: {
         Args: { p_impression: string };
         Returns: { destination_url: string | null; listing_id: string | null }[];
@@ -2160,6 +2648,10 @@ export type Database = {
       };
     };
     Enums: {
+      ad_billing_status: "ok" | "payment_failed" | "suspended";
+      ad_entity_status: "draft" | "active" | "paused" | "archived";
+      ad_member_role: "owner" | "admin" | "editor" | "analyst";
+      ad_review_status: "draft" | "pending" | "approved" | "rejected" | "changes_requested";
       account_status: "active" | "suspended" | "deactivated";
       ad_event_type: "impression" | "click";
       advertiser_status: "active" | "suspended";
@@ -2167,7 +2659,7 @@ export type Database = {
       billing_interval: "month" | "year";
       business_category: "hospitality" | "real_estate" | "automotive" | "yachting" | "aviation" | "events" | "experiences" | "concierge" | "other";
       business_status: "draft" | "pending_review" | "approved" | "rejected" | "suspended";
-      campaign_objective: "awareness" | "traffic" | "inquiries";
+      campaign_objective: "awareness" | "traffic" | "inquiries" | "reach" | "engagement" | "leads" | "conversions" | "event_promotion";
       campaign_status: "draft" | "pending_review" | "active" | "paused" | "completed" | "rejected";
       community_member_status: "active" | "pending" | "banned";
       community_role: "owner" | "moderator" | "member";

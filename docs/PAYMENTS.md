@@ -31,6 +31,34 @@ Members only see the providers that are **configured on the server** and **set u
 
 Checkout also has promotion codes turned on (create them in Stripe → Coupons). It collects a billing address when one is needed and shows the page in the customer's language.
 
+### Advertising balance top-ups (Stripe)
+
+Advertisers prepay into an ELVORA advertising balance. Delivery draws it down. Top-ups use one-time Stripe Checkout payments and the same webhook endpoint.
+
+1. Add these events to the Stripe webhook:
+   - `checkout.session.async_payment_succeeded`
+   - `checkout.session.async_payment_failed`
+   - `charge.refunded`
+   - `payment_intent.payment_failed`
+
+   `checkout.session.completed` is already subscribed.
+2. Allow each currency by adding a row to `ad_billing_settings`, as an admin. Without a row, top-ups in that currency are unavailable:
+
+   ```sql
+   insert into public.ad_billing_settings (currency, min_top_up_minor, max_top_up_minor)
+   values ('USD', 5000, 5000000);  -- $50 – $50,000 per top-up
+   ```
+
+3. How it behaves:
+   - **Crediting:** the balance is credited only when Stripe reports the Checkout Session as **paid**. Card payments are confirmed at once; delayed payment methods are confirmed when they settle.
+   - **Duplicates:** a replayed webhook can't credit twice, because the credit is tied to the Checkout Session id.
+   - **Refunds:** a refund in Stripe becomes a "reversal" entry in the ledger. Partial and repeated refunds add up to the right total.
+   - **Failures:** a failed payment sets the account's billing status to `payment_failed`, and the next successful top-up clears it.
+
+**Statements:** the monthly "statements of account" (`ad_invoices`) summarise the ledger. They are **not tax invoices**. If you need tax invoices, use Stripe Invoicing or your accounting system.
+
+**Razorpay:** advertising top-ups through Razorpay are not supported yet.
+
 ## 2. Razorpay (India)
 
 1. In Razorpay, create a **Plan** for each price. Put each plan id (`plan_...`) in `plan_prices.razorpay_plan_id`.

@@ -48,6 +48,12 @@ export type WebhookEvent = {
   subscriptionId?: string;
   payment?: ProviderPayment;
   refund?: { providerPaymentId: string; refundedAmountMinor: number; fullyRefunded: boolean };
+  /** Advertising balance top-up that has been paid (Stripe one-time Checkout). */
+  adTopUp?: { sessionId: string; accountId: string; amountMinor: number; currency: string; paymentIntentId: string | null };
+  /** A refund on a charge; applied to the ad ledger only if the charge was an ad top-up. */
+  adRefund?: { paymentIntentId: string; chargeId: string; refundedTotalMinor: number };
+  /** An ad top-up payment failed. */
+  adPaymentFailed?: { accountId: string };
 };
 
 export interface PaymentProvider {

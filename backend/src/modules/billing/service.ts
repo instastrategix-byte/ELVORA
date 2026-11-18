@@ -197,6 +197,8 @@ export async function processWebhook(providerId: ProviderId, rawBody: string, he
     );
   }
 
+  await applyAdBillingEvent(admin, event);
+
   await admin
     .from("webhook_events")
     .upsert({ provider: providerId, event_id: event.eventId, event_type: event.type }, { onConflict: "provider,event_id", ignoreDuplicates: true });
@@ -254,3 +256,43 @@ async function notifyPaymentFailed(admin: DbClient, userId: string) {
 }
 
 export type { WebhookEvent };
+
+/**
+ * Advertising balance events. The ledger functions are idempotent (keyed by Checkout Session /
+ * charge), so a replayed or concurrent webhook can never credit twice. A currency mismatch is a
+ * permanent error: it is logged for staff instead of making the provider retry forever.
+ */
+async function applyAdBillingEvent(admin: ReturnType<typeof createAdminClient>, event: WebhookEvent): Promise<void> {
+  if (event.adTopUp) {
+    const t = event.adTopUp;
+    const { error } = await admin.rpc("ad_record_top_up", {
+      p_account: t.accountId,
+      p_amount_minor: t.amountMinor,
+      p_currency: t.currency,
+      p_session_id: t.sessionId,
+      p_payment_intent: t.paymentIntentId,
+    });
+    if (error) {
+      if (error.code === "22023" || error.code === "23503") {
+        logger.error("ads.topup_rejected", { session: t.sessionId, code: error.code, message: error.message });
+      } else {
+        throw error;
+      }
+    } else {
+      logger.info("ads.topup_recorded", { session: t.sessionId, account: t.accountId });
+    }
+  }
+  if (event.adRefund) {
+    const r = event.adRefund;
+    const { error } = await admin.rpc("ad_record_refund", {
+      p_payment_intent: r.paymentIntentId,
+      p_charge_id: r.chargeId,
+      p_refunded_total: r.refundedTotalMinor,
+    });
+    if (error) throw error;
+  }
+  if (event.adPaymentFailed) {
+    const { error } = await admin.rpc("ad_mark_payment_failed", { p_account: event.adPaymentFailed.accountId });
+    if (error && error.code !== "22P02") throw error;
+  }
+}

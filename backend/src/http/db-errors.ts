@@ -15,6 +15,11 @@ export function toAppError(error: PgLikeError, fallback = "The request could not
       return new AppError("business_rule", capitalize(message));
     case "42501":
       return new AppError("forbidden", /permission denied|row-level security/i.test(message) ? "You are not allowed to do that." : capitalize(message));
+    // Raised deliberately by our SQL functions with user-facing messages.
+    case "P0002":
+      return new AppError("not_found", capitalize(message));
+    case "22023":
+      return new AppError("validation_failed", capitalize(message));
     case "23505":
       return new AppError("conflict", "That already exists.");
     case "23503":

@@ -438,6 +438,8 @@ describe("advertising", () => {
       ),
     );
     campaignId = c.rows[0]!.id;
+    // Advertising is prepaid: fund the account so measured delivery can be charged.
+    await db.query(`select public.ad_record_top_up($1, 1000, 'USD', 'cs_rls_fixture', null)`, [acct.rows[0]!.id]);
     await expect(
       asUser(db, DAN, (tx) => tx.query(`update public.ad_campaigns set cpm_minor = 1 where id = $1`, [campaignId])),
     ).rejects.toThrow(/permission denied/);

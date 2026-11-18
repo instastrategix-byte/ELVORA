@@ -1,4 +1,5 @@
 import "server-only";
+import type { Database } from "@backend/db/database.types";
 import type { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { toMinorUnits } from "@/lib/format";
@@ -14,7 +15,7 @@ export type AdvertiserAccount = { id: string; displayName: string; billingEmail:
 export type CampaignView = {
   id: string;
   name: string;
-  objective: "awareness" | "traffic" | "inquiries";
+  objective: Database["public"]["Enums"]["campaign_objective"];
   status: CampaignStatus;
   currency: string;
   dailyBudgetMinor: number;
@@ -59,7 +60,7 @@ type CampaignRow = {
   total_budget_minor: number;
   starts_on: string;
   ends_on: string;
-  headline: string;
+  headline: string | null;
   body: string | null;
   destination_url: string | null;
   listing_id: string | null;
@@ -83,7 +84,8 @@ export function toCampaignView(r: CampaignRow): CampaignView {
     totalBudgetMinor: r.total_budget_minor,
     startsOn: r.starts_on,
     endsOn: r.ends_on,
-    headline: r.headline,
+    // Ads Manager campaigns keep their copy on ads, not the campaign.
+    headline: r.headline ?? r.name,
     body: r.body,
     destinationUrl: r.destination_url,
     listingId: r.listing_id,
