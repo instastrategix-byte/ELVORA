@@ -8,10 +8,10 @@ import { getSummaries } from "@backend/modules/profiles/service";
 import { assertOwnedPath, signedUrls } from "@backend/modules/storage/service";
 import { throwIfError, unwrap } from "@backend/http/db-errors";
 import type { commentSchema, createPostSchema, reportSchema, updatePostSchema } from "./schemas";
-import type { CommentView, PostView } from "./types";
+import type { CommentView, PostView, TrendingTag } from "./types";
 
 const PAGE_SIZE = 15;
-const POST_COLUMNS = "id, author_id, body, visibility, status, like_count, comment_count, created_at, updated_at";
+const POST_COLUMNS = "id, author_id, body, visibility, status, like_count, comment_count, repost_count, created_at, updated_at";
 
 type PostRow = {
   id: string;
@@ -20,23 +20,31 @@ type PostRow = {
   visibility: PostView["visibility"];
   like_count: number;
   comment_count: number;
+  repost_count: number;
   created_at: string;
   updated_at: string;
 };
 
-async function hydrate(db: DbClient, viewer: Viewer | null, rows: PostRow[]): Promise<PostView[]> {
+/**
+ * Turns post rows into views. `reposters` maps post id -> the network member whose repost put
+ * the post in this feed (used for the "X reposted" line).
+ */
+async function hydrate(db: DbClient, viewer: Viewer | null, rows: PostRow[], reposters?: Map<string, string>): Promise<PostView[]> {
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
-  const [authors, mediaRes, likesRes, savesRes] = await Promise.all([
-    getSummaries(db, rows.map((r) => r.author_id)),
+  const none = Promise.resolve({ data: [], error: null });
+  const [authors, mediaRes, likesRes, savesRes, repostsRes] = await Promise.all([
+    getSummaries(db, [...rows.map((r) => r.author_id), ...(reposters ? [...reposters.values()] : [])]),
     db.from("post_media").select("id, post_id, storage_path, media_type, alt_text, position").in("post_id", ids).order("position"),
     viewer ? db.from("post_likes").select("post_id").eq("user_id", viewer.id).in("post_id", ids) : Promise.resolve({ data: [], error: null }),
-    viewer ? db.from("post_saves").select("post_id").eq("user_id", viewer.id).in("post_id", ids) : Promise.resolve({ data: [], error: null }),
+    viewer ? db.from("post_saves").select("post_id").eq("user_id", viewer.id).in("post_id", ids) : none,
+    viewer ? db.from("post_reposts").select("post_id").eq("user_id", viewer.id).in("post_id", ids) : none,
   ]);
   const media = unwrap(mediaRes);
   const urls = await signedUrls(db, "post-media", media.map((m) => m.storage_path));
   const liked = new Set(unwrap(likesRes).map((l) => l.post_id));
   const saved = new Set(unwrap(savesRes).map((s) => s.post_id));
+  const reposted = new Set(unwrap(repostsRes).map((s) => s.post_id));
 
   return rows.map((r) => ({
     id: r.id,
@@ -47,8 +55,11 @@ async function hydrate(db: DbClient, viewer: Viewer | null, rows: PostRow[]): Pr
     updatedAt: r.updated_at,
     likeCount: r.like_count,
     commentCount: r.comment_count,
+    repostCount: r.repost_count,
     likedByViewer: liked.has(r.id),
     savedByViewer: saved.has(r.id),
+    repostedByViewer: reposted.has(r.id),
+    repostedBy: reposters?.has(r.id) ? (authors.get(reposters.get(r.id)!) ?? null) : null,
     isOwn: viewer?.id === r.author_id,
     media: media
       .filter((m) => m.post_id === r.id)
@@ -56,15 +67,25 @@ async function hydrate(db: DbClient, viewer: Viewer | null, rows: PostRow[]): Pr
   }));
 }
 
+const REPOST_WINDOW_DAYS = 30;
+const REPOST_LOOKUP_LIMIT = 300;
+
 /**
- * Feed: "network" = the viewer's own posts plus connections and follows; "all" = every post
- * the viewer may see. Visibility is enforced by RLS (can_view_post); this only narrows.
+ * Feed: "network" = the viewer's own posts, posts by connections and follows, and posts those
+ * people reposted in the last 30 days; "all" = every post the viewer may see. Visibility is
+ * enforced by RLS (can_view_post); this only narrows.
+ *
+ * Reposts widen the *set* of posts; ordering stays by the post's own creation time. That keeps
+ * keyset pagination exact (one stable sort key) at the cost of a reposted older post appearing
+ * at its original position rather than at the time it was reposted.
  */
 export async function listFeed(
   db: DbClient,
   viewer: Viewer,
   opts: { scope: "network" | "all"; cursor?: string; authorId?: string; q?: string },
 ): Promise<Page<PostView>> {
+  const reposters = new Map<string, string>();
+  let networkAuthors: Set<string> | null = null;
   let query = db
     .from("posts")
     .select(POST_COLUMNS)
@@ -83,7 +104,27 @@ export async function listFeed(
     const authorIds = new Set<string>([viewer.id]);
     for (const c of unwrap(conns)) authorIds.add(c.requester_id === viewer.id ? c.addressee_id : c.requester_id);
     for (const f of unwrap(follows)) authorIds.add(f.followee_id);
-    query = query.in("author_id", [...authorIds]);
+
+    const since = new Date(Date.now() - REPOST_WINDOW_DAYS * 86_400_000).toISOString();
+    const reposts = unwrap(
+      await db
+        .from("post_reposts")
+        .select("post_id, user_id, created_at")
+        .in("user_id", [...authorIds])
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(REPOST_LOOKUP_LIMIT),
+    );
+    for (const r of reposts) {
+      // Most recent network repost wins; the viewer's own reposts don't need a "reposted" line.
+      if (!reposters.has(r.post_id) && r.user_id !== viewer.id) reposters.set(r.post_id, r.user_id);
+    }
+    const repostedIds = [...new Set(reposts.map((r) => r.post_id))];
+    query =
+      repostedIds.length > 0
+        ? query.or(`author_id.in.(${[...authorIds].join(",")}),id.in.(${repostedIds.join(",")})`)
+        : query.in("author_id", [...authorIds]);
+    networkAuthors = authorIds;
   }
 
   // Text search: PostgREST filter syntax characters are stripped, so input can't alter the filter.
@@ -94,7 +135,9 @@ export async function listFeed(
   if (cursor) query = query.or(olderThanFilter(cursor));
   const rows = unwrap(await query);
   const page = toPage(rows, PAGE_SIZE, (r) => ({ t: r.created_at, id: r.id }));
-  return { items: await hydrate(db, viewer, page.items), nextCursor: page.nextCursor };
+  // Only label reposts for posts that are here *because of* the repost.
+  if (networkAuthors) for (const r of page.items) if (networkAuthors.has(r.author_id)) reposters.delete(r.id);
+  return { items: await hydrate(db, viewer, page.items, reposters), nextCursor: page.nextCursor };
 }
 
 /** Public posts for a guest-visible profile page. */
@@ -195,6 +238,28 @@ export async function setLike(db: DbClient, viewer: Viewer, postId: string, like
   const post = unwrap(await db.from("posts").select("like_count").eq("id", postId).maybeSingle());
   if (!post) throw new AppError("not_found", "Post not found.");
   return { likeCount: post.like_count };
+}
+
+/** Reposts (or un-reposts) a post; the database refuses own and connections-only posts. */
+export async function setRepost(db: DbClient, viewer: Viewer, postId: string, reposted: boolean): Promise<{ repostCount: number }> {
+  if (reposted) {
+    const { error } = await db.from("post_reposts").insert({ post_id: postId, user_id: viewer.id });
+    if (error && error.code !== "23505") {
+      if (error.code === "42501") throw new AppError("forbidden", "This post can't be reposted.");
+      throwIfError(error);
+    }
+  } else {
+    unwrap(await db.from("post_reposts").delete().eq("post_id", postId).eq("user_id", viewer.id));
+  }
+  const post = unwrap(await db.from("posts").select("repost_count").eq("id", postId).maybeSingle());
+  if (!post) throw new AppError("not_found", "Post not found.");
+  return { repostCount: post.repost_count };
+}
+
+/** Hashtags trending across posts every member can see (aggregates only; see trending_hashtags). */
+export async function listTrendingTags(db: DbClient, limit = 8): Promise<TrendingTag[]> {
+  const rows = unwrap(await db.rpc("trending_hashtags", { p_days: 7, p_limit: limit }));
+  return rows.map((r) => ({ tag: r.tag, postCount: r.post_count }));
 }
 
 export async function setSaved(db: DbClient, viewer: Viewer, postId: string, saved: boolean) {

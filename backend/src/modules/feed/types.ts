@@ -11,8 +11,12 @@ export type PostView = {
   updatedAt: string;
   likeCount: number;
   commentCount: number;
+  repostCount: number;
   likedByViewer: boolean;
   savedByViewer: boolean;
+  repostedByViewer: boolean;
+  /** Set when the post is in the viewer's feed because someone in their network reposted it. */
+  repostedBy?: ProfileSummary | null;
   isOwn: boolean;
   media: PostMedia[];
 };
@@ -25,3 +29,5 @@ export type CommentView = {
   createdAt: string;
   canDelete: boolean;
 };
+
+export type TrendingTag = { tag: string; postCount: number };

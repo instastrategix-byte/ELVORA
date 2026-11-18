@@ -1,4 +1,4 @@
-import { Anchor, Building, Car, Gem, Hotel, PartyPopper, Sailboat, Trees } from "lucide-react";
+import { Anchor, Building, Car, Gem, Hotel, PartyPopper, Plane, Sailboat, Trees } from "lucide-react";
 import { CATEGORY_LABELS, type ListingCategory } from "@backend/modules/listings/schemas";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +9,7 @@ const ART: Record<ListingCategory, { icon: typeof Hotel; tint: string }> = {
   apartment: { icon: Gem, tint: "#22232b" },
   supercar: { icon: Car, tint: "#2b2222" },
   yacht: { icon: Sailboat, tint: "#1c232b" },
+  aviation: { icon: Plane, tint: "#20242a" },
   event: { icon: PartyPopper, tint: "#262229" },
   experience: { icon: Anchor, tint: "#252720" },
 };

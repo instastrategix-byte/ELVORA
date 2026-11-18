@@ -1,9 +1,10 @@
 "use client";
 
-import { ImagePlus, Video, X } from "lucide-react";
+import { ImagePlus, Sparkles, Video, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, Textarea } from "@/components/ui/form";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
 import { Alert, Avatar } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api-client";
@@ -13,7 +14,24 @@ import type { PostView } from "@backend/modules/feed/types";
 
 type Attachment = { key: string; file: File; preview: string; type: "image" | "video"; path?: string; status: "uploading" | "ready" | "failed" };
 
-export function PostComposer({ authorName, avatarUrl, onCreated }: { authorName: string; avatarUrl: string | null; onCreated: (post: PostView) => void }) {
+const REFINE_OPTIONS = [
+  { mode: "polish", label: "Polish wording" },
+  { mode: "concise", label: "Make it concise" },
+  { mode: "professional", label: "More professional" },
+  { mode: "warmer", label: "Warmer tone" },
+] as const;
+
+export function PostComposer({
+  authorName,
+  avatarUrl,
+  aiEnabled = false,
+  onCreated,
+}: {
+  authorName: string;
+  avatarUrl: string | null;
+  aiEnabled?: boolean;
+  onCreated: (post: PostView) => void;
+}) {
   const [body, setBody] = useState("");
   const [visibility, setVisibility] = useState<"public" | "members" | "connections">("members");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -22,6 +40,21 @@ export function PostComposer({ authorName, avatarUrl, onCreated }: { authorName:
   const imageInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
   const toast = useToast();
+  const [refining, setRefining] = useState(false);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
+
+  async function refine(mode: (typeof REFINE_OPTIONS)[number]["mode"]) {
+    setRefining(true);
+    setError(null);
+    try {
+      const res = await api<{ text: string }>("/api/v1/ai/refine", { method: "POST", body: { draft: body, mode } });
+      setSuggestion(res.text);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setRefining(false);
+    }
+  }
 
   const uploading = attachments.some((a) => a.status === "uploading");
   const failed = attachments.some((a) => a.status === "failed");
@@ -135,6 +168,29 @@ export function PostComposer({ authorName, avatarUrl, onCreated }: { authorName:
         </ul>
       ) : null}
 
+      {suggestion !== null ? (
+        <div className="mt-3 rounded-xl border border-accent/40 bg-surface-2 p-4" aria-live="polite">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-accent">
+            <Sparkles className="size-3.5" aria-hidden="true" /> Suggested rewrite — review before posting
+          </p>
+          <p className="text-[15px] leading-7 whitespace-pre-line">{suggestion}</p>
+          <div className="mt-3 flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setSuggestion(null)}>
+              Keep mine
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setBody(suggestion.slice(0, POST_MAX_LENGTH));
+                setSuggestion(null);
+              }}
+            >
+              Use this
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {error ? (
         <Alert tone="error" className="mt-3">
           {error}
@@ -150,6 +206,22 @@ export function PostComposer({ authorName, avatarUrl, onCreated }: { authorName:
         <Button variant="ghost" size="sm" onClick={() => videoInput.current?.click()} disabled={attachments.length >= MAX_ATTACHMENTS}>
           <Video className="text-accent" /> Video
         </Button>
+        {aiEnabled ? (
+          <Menu>
+            <MenuTrigger asChild>
+              <Button variant="ghost" size="sm" disabled={refining || body.trim().length < 10} title={body.trim().length < 10 ? "Write a draft first" : undefined}>
+                <Sparkles className="text-accent" /> {refining ? "Refining…" : "Refine with AI"}
+              </Button>
+            </MenuTrigger>
+            <MenuContent align="start">
+              {REFINE_OPTIONS.map((o) => (
+                <MenuItem key={o.mode} onSelect={() => refine(o.mode)}>
+                  {o.label}
+                </MenuItem>
+              ))}
+            </MenuContent>
+          </Menu>
+        ) : null}
         <label className="ml-auto flex items-center gap-2 text-sm text-muted">
           <span className="sr-only sm:not-sr-only">Visible to</span>
           <Select value={visibility} onChange={(e) => setVisibility(e.target.value as typeof visibility)} className="h-9 w-auto text-sm">

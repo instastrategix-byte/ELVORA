@@ -25,7 +25,7 @@ export function PostList({
   initial: Page<PostView>;
   endpoint: string | null;
   canInteract: boolean;
-  composer?: { authorName: string; avatarUrl: string | null };
+  composer?: { authorName: string; avatarUrl: string | null; aiEnabled?: boolean };
   emptyTitle?: string;
   emptyDescription?: string;
   header?: React.ReactNode;

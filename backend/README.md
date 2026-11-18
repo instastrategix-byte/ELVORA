@@ -20,6 +20,7 @@ backend/
 ├─ supabase/
 │  ├─ migrations/         Source of truth for schema, RLS, grants, functions, storage, realtime
 │  ├─ seed.sql            Fictional local-only data (refuses to run on non-seed databases)
+│  ├─ seeds/              Demo dataset loaded after seed.sql (demo.sql, demo_communities.sql)
 │  └─ config.toml         Local stack config (Auth redirects, password policy, providers)
 ├─ scripts/gen-db-types.mts  Generates src/db/database.types.ts from the migrations (PGlite, no Docker)
 └─ tests/db/              RLS / workflow tests against the real migrations on PGlite
@@ -63,6 +64,38 @@ All logic, validation schemas and authorization live here in `backend/`. Contrac
 | `npm run db:reset` | Re-apply migrations + seed locally |
 | `npm run db:push` | Apply migrations to the linked hosted project (`npx supabase link --workdir backend` first) |
 | `npm run db:types:local` | Types via the official Supabase generator (needs `db:start`) |
+
+## Demo data (local development only)
+
+`npm run db:reset` (Docker) applies the migrations, then `supabase/seed.sql`, then `supabase/seeds/*.sql`
+(see `[db.seed]` in `config.toml`). Together they create a fictional community to develop and test against:
+
+| Data | Amount |
+|---|---|
+| Professional profiles (founders, investors, executives, creatives, businesses) with experience | 30 |
+| Feed posts with likes, comments, #hashtags and @mentions | 50 |
+| Active stories (expire 24 hours after `db:reset`) | 15 |
+| Upcoming published events with RSVPs | 10 |
+| Marketplace listings from 4 approved businesses (hotels, resorts, villas, yachts, supercars, aviation, experiences) | 15 |
+| Communities with members, threads and replies | 10 |
+
+Everything is labelled as demo content: profile bios start with "Demo profile —", business and community
+names end with "(Demo)", and listing summaries start with "Demo listing —". No external images are used.
+Avatars, covers and post or listing media are empty, so the UI shows its fallbacks. Stories point at paths in each
+author's folder, but the files are not shipped, so the story viewer shows "media unavailable".
+
+**Logins.** Every seed account uses the password `ElvoraLocal2026`. The base accounts are
+`admin@`, `isabella@`, `rohan@`, `azure@` and `member@seed.elvora.test`. Demo members use their handle with
+dots, for example `amara.okafor@seed.elvora.test`, `noah.fischer@seed.elvora.test` (business owner, aviation)
+and `aria.shah@seed.elvora.test` (business owner, supercars).
+
+> **Never load this data into production.** `supabase db push` / `npm run db:push` never run seed files.
+> Never execute `seed.sql` or `seeds/*.sql` against the linked project (for example with
+> `supabase db query --linked -f ...`). Every seed file aborts if the database contains any user outside
+> `@seed.elvora.test`, but do not rely on that guard alone.
+
+`backend/tests/db/demo-seed.test.ts` loads the seeds on PGlite after all migrations and checks these counts
+and labels.
 
 See [docs/DATABASE_DESIGN.md](../docs/DATABASE_DESIGN.md), [docs/SECURITY_THREAT_MODEL.md](../docs/SECURITY_THREAT_MODEL.md)
 and [docs/DEPLOYMENT_RUNBOOK.md](../docs/DEPLOYMENT_RUNBOOK.md).

@@ -10,10 +10,11 @@ import { cn } from "@/lib/utils";
 import { hasFeature } from "@backend/modules/auth/permissions";
 import { listFeed } from "@backend/modules/feed/service";
 import { requirePageSession } from "@backend/auth/viewer";
+import { isAiConfigured } from "@backend/modules/ai/service";
 import { Suspense } from "react";
 import { WidgetSkeleton } from "@/components/dashboard/widgets";
 import { EventsSection } from "../home/personal-sections";
-import { SuggestionsSection } from "../home/sections";
+import { SuggestionsSection, TrendingSection } from "../home/sections";
 import { StoriesSection } from "../home/stories-section";
 
 export const metadata: Metadata = { title: "Feed" };
@@ -42,6 +43,7 @@ export default async function FeedPage({
           ? {
               authorName: viewer.displayName,
               avatarUrl: publicMediaUrl("profile-media", viewer.avatarPath),
+              aiEnabled: isAiConfigured(),
             }
           : undefined
       }
@@ -99,6 +101,9 @@ export default async function FeedPage({
       >
         <Suspense fallback={<WidgetSkeleton rows={3} />}>
           <SuggestionsSection />
+        </Suspense>
+        <Suspense fallback={null}>
+          <TrendingSection />
         </Suspense>
         <Suspense fallback={<WidgetSkeleton rows={2} />}>
           <EventsSection />

@@ -35,11 +35,11 @@ on conflict do nothing;
 -- Seed users (fictional).
 with seed_users (id, email, name) as (
   values
-    ('11111111-0000-4000-8000-000000000001'::uuid, 'admin@seed.elvora.test', 'Seed Admin'),
-    ('11111111-0000-4000-8000-000000000002'::uuid, 'isabella@seed.elvora.test', 'Isabella Marchetti'),
-    ('11111111-0000-4000-8000-000000000003'::uuid, 'rohan@seed.elvora.test', 'Rohan Kapoor'),
-    ('11111111-0000-4000-8000-000000000004'::uuid, 'azure@seed.elvora.test', 'Azure Coast Collection'),
-    ('11111111-0000-4000-8000-000000000005'::uuid, 'member@seed.elvora.test', 'Elena Duarte')
+    ('00000001-5eed-4000-8000-000000000001'::uuid, 'admin@seed.elvora.test', 'Seed Admin'),
+    ('00000002-5eed-4000-8000-000000000002'::uuid, 'isabella@seed.elvora.test', 'Isabella Marchetti'),
+    ('00000003-5eed-4000-8000-000000000003'::uuid, 'rohan@seed.elvora.test', 'Rohan Kapoor'),
+    ('00000004-5eed-4000-8000-000000000004'::uuid, 'azure@seed.elvora.test', 'Azure Coast Collection'),
+    ('00000005-5eed-4000-8000-000000000005'::uuid, 'member@seed.elvora.test', 'Elena Duarte')
 )
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -62,29 +62,29 @@ update public.profiles p set
   handle = v.handle, headline = v.headline, location = v.location, interests = v.interests,
   profile_visibility = v.visibility::public.visibility, onboarding_completed_at = now()
 from (values
-  ('11111111-0000-4000-8000-000000000001'::uuid, 'seed_admin', 'Platform administrator (seed)', 'London', '{}'::text[], 'members'),
-  ('11111111-0000-4000-8000-000000000002'::uuid, 'isabella', 'Founder, Marchetti Atelier (fictional)', 'Milan', '{design,yachting,art}', 'public'),
-  ('11111111-0000-4000-8000-000000000003'::uuid, 'rohan', 'Managing Partner, fictional growth fund', 'Mumbai', '{venture,supercars}', 'members'),
-  ('11111111-0000-4000-8000-000000000004'::uuid, 'azure_coast', 'Boutique villas on the Riviera (fictional)', 'Nice', '{hospitality}', 'public'),
-  ('11111111-0000-4000-8000-000000000005'::uuid, 'elena', 'Architect', 'Lisbon', '{architecture,travel}', 'members')
+  ('00000001-5eed-4000-8000-000000000001'::uuid, 'seed_admin', 'Platform administrator (seed)', 'London', '{}'::text[], 'members'),
+  ('00000002-5eed-4000-8000-000000000002'::uuid, 'isabella', 'Founder, Marchetti Atelier (fictional)', 'Milan', '{design,yachting,art}', 'public'),
+  ('00000003-5eed-4000-8000-000000000003'::uuid, 'rohan', 'Managing Partner, fictional growth fund', 'Mumbai', '{venture,supercars}', 'members'),
+  ('00000004-5eed-4000-8000-000000000004'::uuid, 'azure_coast', 'Boutique villas on the Riviera (fictional)', 'Nice', '{hospitality}', 'public'),
+  ('00000005-5eed-4000-8000-000000000005'::uuid, 'elena', 'Architect', 'Lisbon', '{architecture,travel}', 'members')
 ) as v (id, handle, headline, location, interests, visibility)
 where p.id = v.id;
 
-insert into public.staff_roles (user_id, role) values ('11111111-0000-4000-8000-000000000001', 'admin');
+insert into public.staff_roles (user_id, role) values ('00000001-5eed-4000-8000-000000000001', 'admin');
 
 -- Trusted records that would normally arrive from staff review and payment webhooks.
 insert into public.verifications (user_id, kind, status, statement, reviewed_at) values
-  ('11111111-0000-4000-8000-000000000002', 'executive', 'approved', 'Seed verification', now());
+  ('00000002-5eed-4000-8000-000000000002', 'executive', 'approved', 'Seed verification', now());
 insert into public.membership_applications (user_id, plan_id, status, statement, decided_at) values
-  ('11111111-0000-4000-8000-000000000002', 'premium', 'approved', 'Seed application', now()),
-  ('11111111-0000-4000-8000-000000000004', 'business', 'approved', 'Seed application', now()),
-  ('11111111-0000-4000-8000-000000000003', 'premium', 'submitted', 'Seed application awaiting review', null);
+  ('00000002-5eed-4000-8000-000000000002', 'premium', 'approved', 'Seed application', now()),
+  ('00000004-5eed-4000-8000-000000000004', 'business', 'approved', 'Seed application', now()),
+  ('00000003-5eed-4000-8000-000000000003', 'premium', 'submitted', 'Seed application awaiting review', null);
 insert into public.subscriptions (user_id, plan_id, provider, provider_subscription_id, status, current_period_end) values
-  ('11111111-0000-4000-8000-000000000002', 'premium', 'stripe', 'seed_sub_isabella', 'active', now() + interval '30 days'),
-  ('11111111-0000-4000-8000-000000000004', 'business', 'stripe', 'seed_sub_azure', 'active', now() + interval '30 days');
+  ('00000002-5eed-4000-8000-000000000002', 'premium', 'stripe', 'seed_sub_isabella', 'active', now() + interval '30 days'),
+  ('00000004-5eed-4000-8000-000000000004', 'business', 'stripe', 'seed_sub_azure', 'active', now() + interval '30 days');
 
 insert into public.businesses (id, owner_id, name, slug, category, description, location, website, status, reviewed_at) values
-  ('22222222-0000-4000-8000-000000000001', '11111111-0000-4000-8000-000000000004', 'Azure Coast Collection', 'azure-coast-collection',
+  ('22222222-0000-4000-8000-000000000001', '00000004-5eed-4000-8000-000000000004', 'Azure Coast Collection', 'azure-coast-collection',
    'hospitality', 'A fictional collection of private villas used for local development.', 'Côte d''Azur, France',
    'https://example.test', 'approved', now());
 
@@ -100,12 +100,12 @@ insert into public.listings (business_id, title, slug, category, summary, descri
    'Draft listing visible only to its owner (fictional).', null, 'Nice', 'France', null, null, null, '{}', 'public', 'draft', null, null);
 
 insert into public.posts (author_id, body, visibility) values
-  ('11111111-0000-4000-8000-000000000002', 'Seed post: preparing the autumn collection preview in Milan. (Fictional content for local development.)', 'public'),
-  ('11111111-0000-4000-8000-000000000003', 'Seed post: members-only note on this quarter''s founder dinners. (Fictional.)', 'members');
+  ('00000002-5eed-4000-8000-000000000002', 'Seed post: preparing the autumn collection preview in Milan. (Fictional content for local development.)', 'public'),
+  ('00000003-5eed-4000-8000-000000000003', 'Seed post: members-only note on this quarter''s founder dinners. (Fictional.)', 'members');
 
 insert into public.connections (requester_id, addressee_id, status, responded_at) values
-  ('11111111-0000-4000-8000-000000000002', '11111111-0000-4000-8000-000000000003', 'accepted', now()),
-  ('11111111-0000-4000-8000-000000000005', '11111111-0000-4000-8000-000000000002', 'pending', null);
+  ('00000002-5eed-4000-8000-000000000002', '00000003-5eed-4000-8000-000000000003', 'accepted', now()),
+  ('00000005-5eed-4000-8000-000000000005', '00000002-5eed-4000-8000-000000000002', 'pending', null);
 
 -- Fictional invitation: code ELVORA-LOCAL-INVITE (pre-approved Premium, 50 uses).
 insert into public.invitations (code_hash, plan_id, pre_approved, max_uses, expires_at) values

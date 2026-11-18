@@ -6,6 +6,23 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      introduction_requests: {
+        Row: {
+          id: string;
+          requester_id: string;
+          introducer_id: string;
+          target_id: string;
+          message: string;
+          introducer_note: string | null;
+          status: Database["public"]["Enums"]["introduction_status"];
+          declined_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
       account_deletion_requests: {
         Row: {
           id: string;
@@ -314,6 +331,126 @@ export type Database = {
           review_note?: string | null;
           reviewed_by?: string | null;
           reviewed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      communities: {
+        Row: {
+          id: string;
+          slug: string;
+          name: string;
+          description: string | null;
+          category: string | null;
+          visibility: Database["public"]["Enums"]["community_visibility"];
+          cover_path: string | null;
+          created_by: string;
+          member_count: number;
+          archived_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          name: string;
+          description?: string | null;
+          category?: string | null;
+          visibility?: Database["public"]["Enums"]["community_visibility"];
+          cover_path?: string | null;
+          created_by: string;
+          member_count?: number;
+          archived_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          slug?: string;
+          name?: string;
+          description?: string | null;
+          category?: string | null;
+          visibility?: Database["public"]["Enums"]["community_visibility"];
+          cover_path?: string | null;
+          created_by?: string;
+          member_count?: number;
+          archived_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      community_members: {
+        Row: {
+          community_id: string;
+          user_id: string;
+          role: Database["public"]["Enums"]["community_role"];
+          status: Database["public"]["Enums"]["community_member_status"];
+          joined_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          community_id: string;
+          user_id: string;
+          role?: Database["public"]["Enums"]["community_role"];
+          status?: Database["public"]["Enums"]["community_member_status"];
+          joined_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          community_id?: string;
+          user_id?: string;
+          role?: Database["public"]["Enums"]["community_role"];
+          status?: Database["public"]["Enums"]["community_member_status"];
+          joined_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      community_replies: {
+        Row: { id: string; thread_id: string; author_id: string; body: string; created_at: string; updated_at: string };
+        Insert: { id?: string; thread_id: string; author_id: string; body: string; created_at?: string; updated_at?: string };
+        Update: { id?: string; thread_id?: string; author_id?: string; body?: string; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      community_threads: {
+        Row: {
+          id: string;
+          community_id: string;
+          author_id: string;
+          title: string;
+          body: string;
+          pinned: boolean;
+          locked: boolean;
+          reply_count: number;
+          last_activity_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          community_id: string;
+          author_id: string;
+          title: string;
+          body: string;
+          pinned?: boolean;
+          locked?: boolean;
+          reply_count?: number;
+          last_activity_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          community_id?: string;
+          author_id?: string;
+          title?: string;
+          body?: string;
+          pinned?: boolean;
+          locked?: boolean;
+          reply_count?: number;
+          last_activity_at?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -1144,6 +1281,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      post_reposts: {
+        Row: {
+          user_id: string;
+          post_id: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          post_id: string;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          post_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       posts: {
         Row: {
           id: string;
@@ -1153,6 +1308,7 @@ export type Database = {
           status: Database["public"]["Enums"]["content_status"];
           like_count: number;
           comment_count: number;
+          repost_count: number;
           created_at: string;
           updated_at: string;
         };
@@ -1164,6 +1320,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["content_status"];
           like_count?: number;
           comment_count?: number;
+          repost_count?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -1175,6 +1332,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["content_status"];
           like_count?: number;
           comment_count?: number;
+          repost_count?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -1602,6 +1760,10 @@ export type Database = {
         Args: { p_business: string; p_status: Database["public"]["Enums"]["listing_status"]; p_visibility: Database["public"]["Enums"]["listing_visibility"] };
         Returns: boolean;
       };
+      trending_hashtags: {
+        Args: { p_days?: number; p_limit?: number };
+        Returns: { tag: string; post_count: number }[];
+      };
       can_view_post: {
         Args: { p_author: string; p_visibility: Database["public"]["Enums"]["visibility"]; p_status: Database["public"]["Enums"]["content_status"] };
         Returns: boolean;
@@ -1714,6 +1876,13 @@ export type Database = {
         Args: { p_topic: string };
         Returns: boolean;
       };
+      introduction_paths: { Args: { p_target: string }; Returns: string[] };
+      profile_view_stats: { Args: { p_days?: number }; Returns: { day: string; views: number }[] };
+      record_profile_view: { Args: { p_profile: string }; Returns: undefined };
+      request_introduction: { Args: { p_introducer: string; p_target: string; p_message: string }; Returns: string };
+      respond_introduction_as_introducer: { Args: { p_id: string; p_forward: boolean; p_note?: string | null }; Returns: undefined };
+      respond_introduction_as_target: { Args: { p_id: string; p_accept: boolean }; Returns: undefined };
+      withdraw_introduction: { Args: { p_id: string }; Returns: undefined };
       record_ad_click: {
         Args: { p_impression: string };
         Returns: { destination_url: string | null; listing_id: string | null }[];
@@ -1801,6 +1970,9 @@ export type Database = {
       business_status: "draft" | "pending_review" | "approved" | "rejected" | "suspended";
       campaign_objective: "awareness" | "traffic" | "inquiries";
       campaign_status: "draft" | "pending_review" | "active" | "paused" | "completed" | "rejected";
+      community_member_status: "active" | "pending" | "banned";
+      community_role: "owner" | "moderator" | "member";
+      community_visibility: "open" | "private";
       connection_status: "pending" | "accepted" | "declined";
       content_status: "published" | "hidden" | "removed";
       deletion_status: "pending" | "processing" | "completed" | "cancelled";
@@ -1810,13 +1982,14 @@ export type Database = {
       rsvp_status: "invited" | "interested" | "going" | "waitlisted" | "cancelled";
       member_type: "founder" | "executive" | "investor" | "professional" | "public_figure" | "creative" | "business";
       inquiry_status: "new" | "responded" | "closed";
-      listing_category: "hotel" | "resort" | "villa" | "apartment" | "supercar" | "yacht" | "event" | "experience";
+      listing_category: "hotel" | "resort" | "villa" | "apartment" | "supercar" | "yacht" | "event" | "experience" | "aviation";
       listing_status: "draft" | "pending_review" | "published" | "rejected" | "archived" | "removed";
       listing_visibility: "public" | "members";
       media_type: "image" | "video";
       messaging_policy: "connections" | "members" | "nobody";
       moderation_action_type: "hide_content" | "remove_content" | "restore_content" | "warn" | "suspend" | "reinstate";
-      notification_type: "connection_request" | "connection_accepted" | "new_follower" | "post_liked" | "post_commented" | "message" | "membership_update" | "application_update" | "verification_update" | "moderation_notice" | "listing_inquiry" | "business_update" | "campaign_update" | "event_update";
+      introduction_status: "pending" | "forwarded" | "accepted" | "declined" | "withdrawn";
+      notification_type: "connection_request" | "connection_accepted" | "new_follower" | "post_liked" | "post_commented" | "message" | "membership_update" | "application_update" | "verification_update" | "moderation_notice" | "listing_inquiry" | "business_update" | "campaign_update" | "event_update" | "community_reply" | "community_request" | "mention" | "post_reposted" | "introduction";
       payment_provider: "stripe" | "razorpay";
       payment_status: "pending" | "paid" | "failed" | "refunded";
       plan_audience: "individual" | "premium" | "professional" | "business" | "advertiser";

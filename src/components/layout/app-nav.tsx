@@ -8,6 +8,7 @@ import {
   Compass,
   CreditCard,
   Gem,
+  Handshake,
   LayoutDashboard,
   LifeBuoy,
   Megaphone,
@@ -20,6 +21,7 @@ import {
   ShieldCheck,
   User,
   Users,
+  UsersRound,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -35,6 +37,7 @@ const MAIN: NavItem[] = [
   { href: "/feed", label: "Feed", icon: Newspaper },
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/connections", label: "Network", icon: Users },
+  { href: "/introductions", label: "Introductions", icon: Handshake },
   { href: "/messages", label: "Messages", icon: MessageSquare },
   { href: "/notifications", label: "Notifications", icon: Bell },
 ];
@@ -42,6 +45,7 @@ const MAIN: NavItem[] = [
 const EXPLORE: NavItem[] = [
   { href: "/luxury", label: "Marketplace", icon: Gem },
   { href: "/events", label: "Events", icon: CalendarDays },
+  { href: "/communities", label: "Communities", icon: UsersRound },
   { href: "/saved", label: "Saved", icon: Bookmark },
 ];
 

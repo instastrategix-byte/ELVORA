@@ -16,6 +16,7 @@ import { hasFeature } from "@backend/modules/auth/permissions";
 import { searchBusinesses } from "@backend/modules/listings/service";
 import { memberSearchSchema } from "@backend/modules/profiles/schemas";
 import { searchMembers } from "@backend/modules/profiles/service";
+import { MEMBER_TYPE_LABELS, MEMBER_TYPES, OPEN_TO, OPEN_TO_LABELS } from "@backend/modules/profiles/types";
 import { getSession } from "@backend/auth/viewer";
 
 export const metadata: Metadata = {
@@ -52,6 +53,9 @@ async function DiscoverResults({ searchParams }: { searchParams: SearchParams })
     location: str(raw.location),
     industry: str(raw.industry),
     verified: str(raw.verified),
+    memberType: str(raw.memberType),
+    interest: str(raw.interest),
+    openTo: str(raw.openTo),
   });
   const search = parsed.success ? parsed.data : {};
 
@@ -61,7 +65,19 @@ async function DiscoverResults({ searchParams }: { searchParams: SearchParams })
   const advanced = hasFeature(viewer, "discover.advanced");
   const isMember = Boolean(viewer?.onboarded);
 
-  const effective = { q: search.q, ...(advanced ? { location: search.location, industry: search.industry, verified: search.verified } : {}) };
+  const effective = {
+    q: search.q,
+    ...(advanced
+      ? {
+          location: search.location,
+          industry: search.industry,
+          verified: search.verified,
+          memberType: search.memberType,
+          interest: search.interest,
+          openTo: search.openTo,
+        }
+      : {}),
+  };
   const query = Object.fromEntries(Object.entries(effective).filter(([, v]) => v)) as Record<string, string>;
   const result = await attempt(async () => {
     const db = session?.db ?? (await createClient());
@@ -141,6 +157,32 @@ async function DiscoverResults({ searchParams }: { searchParams: SearchParams })
                 <option value="verified">Verified only</option>
               </Select>
             </label>
+            <label>
+              <span className="sr-only">Profession</span>
+              <Select name="memberType" defaultValue={search.memberType ?? ""}>
+                <option value="">Any profession</option>
+                {MEMBER_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {MEMBER_TYPE_LABELS[t]}
+                  </option>
+                ))}
+              </Select>
+            </label>
+            <label>
+              <span className="sr-only">Interest</span>
+              <Input name="interest" defaultValue={search.interest} placeholder="Interest, e.g. Sailing" />
+            </label>
+            <label>
+              <span className="sr-only">Open to</span>
+              <Select name="openTo" defaultValue={search.openTo ?? ""}>
+                <option value="">Open to anything</option>
+                {OPEN_TO.map((o) => (
+                  <option key={o} value={o}>
+                    Open to {OPEN_TO_LABELS[o].toLowerCase()}
+                  </option>
+                ))}
+              </Select>
+            </label>
           </div>
         ) : null}
       </form>
@@ -149,7 +191,7 @@ async function DiscoverResults({ searchParams }: { searchParams: SearchParams })
         <Alert tone="info">
           {isMember ? (
             <>
-              Location, industry and verification filters are included with Premium.{" "}
+              Profession, location, industry, interest and verification filters are included with Premium.{" "}
               <Link href="/account/membership" className="text-accent hover:underline">
                 Learn more
               </Link>

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ServiceNotice } from "@/components/feedback/service-notice";
 import { PostList } from "@/components/feed/post-list";
+import { BusinessCardActions, ProfileViewBeacon, RequestIntroductionButton } from "@/components/profile/profile-extras";
 import { ProfileActions } from "@/components/social/profile-actions";
 import { Button } from "@/components/ui/button";
 import { experienceRange } from "@/components/profile/experience-format";
@@ -102,7 +103,12 @@ async function Profile({ params }: { params: Params }) {
                 </Link>
               </Button>
             ) : relationship ? (
-              <ProfileActions userId={profile.id} displayName={profile.displayName} relationship={relationship} canConnect={canConnect} />
+              <>
+                <ProfileActions userId={profile.id} displayName={profile.displayName} relationship={relationship} canConnect={canConnect} />
+                {canConnect && relationship.connection?.status !== "accepted" && !relationship.blocked ? (
+                  <RequestIntroductionButton targetId={profile.id} targetName={profile.displayName} />
+                ) : null}
+              </>
             ) : !viewerIsMember ? (
               <Button asChild>
                 <Link href={`/sign-in?next=/members/${profile.handle}`}>Sign in to connect</Link>
@@ -123,6 +129,8 @@ async function Profile({ params }: { params: Params }) {
                 </div>
               </div>
               {profile.headline ? <p className="text-lg">{profile.headline}</p> : null}
+              <BusinessCardActions handle={profile.handle} displayName={profile.displayName} />
+              {viewerIsMember && !isSelf ? <ProfileViewBeacon profileId={profile.id} /> : null}
               <ul className="space-y-2 text-sm text-muted">
                 {profile.jobTitle || profile.company ? (
                   <li className="flex items-center gap-2">

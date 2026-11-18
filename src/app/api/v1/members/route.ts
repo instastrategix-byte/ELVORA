@@ -13,5 +13,8 @@ export const GET = route({ name: "members.search", auth: "public", query: member
     location: advanced ? query.location : undefined,
     industry: advanced ? query.industry : undefined,
     verified: advanced ? query.verified : undefined,
+    memberType: advanced ? query.memberType : undefined,
+    interest: advanced ? query.interest : undefined,
+    openTo: advanced ? query.openTo : undefined,
   });
 });

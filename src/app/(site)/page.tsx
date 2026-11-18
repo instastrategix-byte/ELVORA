@@ -33,7 +33,7 @@ const PILLARS = [
   {
     icon: Compass,
     title: "Luxury discovery",
-    body: "Villas, residences, yachts, supercars and rare experiences from verified providers, in one curated marketplace.",
+    body: "Villas, residences, yachts, supercars, private aviation and rare experiences from verified providers, in one curated marketplace.",
   },
   {
     icon: MessageSquareLock,
@@ -56,7 +56,7 @@ const TRUST = [
 ];
 
 /** Marketplace tiles spanning two columns on desktop: 8 tiles + 4 extra cells = three full rows of 4. */
-const WIDE_TILES = new Set([0, 5, 6, 7]);
+const WIDE_TILES = new Set([0, 5, 8]);
 
 const STEPS = [
   { n: "01", title: "Apply or accept an invitation", body: "Tell us who you are. Invitations from members can fast-track review." },
@@ -195,7 +195,7 @@ export default function HomePage() {
           </div>
           <ul className="mt-12 grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
             {LISTING_CATEGORIES.map((c, i) => (
-              <li key={c} className={WIDE_TILES.has(i) ? "md:col-span-2" : undefined}>
+              <li key={c} className={cn(WIDE_TILES.has(i) && "md:col-span-2", i === LISTING_CATEGORIES.length - 1 && "col-span-2")}>
                 <Link
                   href={`/luxury?category=${c}`}
                   className="group relative block overflow-hidden rounded-3xl border border-border shadow-soft transition-shadow hover:shadow-lift"

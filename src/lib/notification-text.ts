@@ -16,6 +16,13 @@ export function describeNotification(n: NotificationView): { text: string; href:
       return { text: `${who} liked your post`, href: n.entityId ? `/posts/${n.entityId}` : null };
     case "post_commented":
       return { text: `${who} commented on your post`, href: n.entityId ? `/posts/${n.entityId}` : null };
+    case "post_reposted":
+      return { text: `${who} reposted your post`, href: n.entityId ? `/posts/${n.entityId}` : null };
+    case "mention":
+      return {
+        text: n.payload.source === "comment" ? `${who} mentioned you in a comment` : `${who} mentioned you in a post`,
+        href: n.entityId ? `/posts/${n.entityId}` : null,
+      };
     case "message":
       return { text: `New message from ${who}`, href: n.entityId ? `/messages/${n.entityId}` : "/messages" };
     case "membership_update":
@@ -32,6 +39,16 @@ export function describeNotification(n: NotificationView): { text: string; href:
       return { text: `Business review update: ${status}`, href: "/business" };
     case "campaign_update":
       return { text: `Campaign review update: ${status}`, href: n.entityId ? `/ads/campaigns/${n.entityId}` : "/ads" };
+    case "community_reply": {
+      const title = typeof n.payload.title === "string" ? `“${n.payload.title}”` : "your discussion";
+      const slug = typeof n.payload.slug === "string" ? n.payload.slug : null;
+      return { text: `${who} replied to ${title}`, href: slug && n.entityId ? `/communities/${slug}/threads/${n.entityId}` : "/communities" };
+    }
+    case "community_request": {
+      const name = typeof n.payload.name === "string" ? n.payload.name : "your community";
+      const slug = typeof n.payload.slug === "string" ? n.payload.slug : null;
+      return { text: `${who} asked to join ${name}`, href: slug ? `/communities/${slug}/manage` : "/communities" };
+    }
     case "event_update": {
       const title = typeof n.payload.title === "string" ? `“${n.payload.title}”` : "an event";
       const href = n.entityId ? `/events/${n.entityId}` : "/events";
@@ -47,6 +64,20 @@ export function describeNotification(n: NotificationView): { text: string; href:
         default:
           return { text: `Update on ${title}`, href };
       }
+    }
+    case "introduction": {
+      const st = typeof n.payload.status === "string" ? n.payload.status : "";
+      const text =
+        st === "pending"
+          ? `${who} asked you for an introduction`
+          : st === "forwarded"
+            ? `${who} made an introduction`
+            : st === "accepted"
+              ? `${who} accepted an introduction — you're now connected`
+              : st === "declined"
+                ? "An introduction request was declined"
+                : "Introduction update";
+      return { text, href: st === "pending" ? "/introductions" : st === "forwarded" ? "/introductions?tab=received" : "/introductions?tab=sent" };
     }
     default:
       return { text: "You have a new notification", href: null };

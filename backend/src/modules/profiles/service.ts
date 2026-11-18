@@ -293,6 +293,16 @@ export async function searchMembers(db: DbClient, viewer: Viewer | null, search:
   const ind = search.industry?.replace(/[%,()]/g, " ").trim();
   if (ind) query = query.ilike("industry", `%${ind}%`);
   if (search.verified === "verified") query = query.filter("verified_kinds", "neq", "{}");
+  if (search.memberType) query = query.eq("member_type", search.memberType);
+  if (search.openTo) query = query.contains("open_to", [search.openTo]);
+  // Interests are free text as members typed them; match the common casings of the term
+  // (exact, lower, Title) rather than scanning every array element case-insensitively.
+  const interest = search.interest?.trim();
+  if (interest) {
+    const lower = interest.toLowerCase();
+    const title = lower.replace(/\b\w/g, (c) => c.toUpperCase());
+    query = query.overlaps("interests", [...new Set([interest, lower, title])]);
+  }
   const cursor = decodeCursor(search.cursor);
   if (cursor) query = query.or(olderThanFilter(cursor));
   const rows = unwrap(await query);

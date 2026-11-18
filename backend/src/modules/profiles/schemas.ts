@@ -79,6 +79,10 @@ export const memberSearchSchema = z.object({
   location: z.string().trim().max(80).optional(),
   industry: z.string().trim().max(60).optional(),
   verified: z.enum(["any", "verified"]).optional(),
+  /** Profession, as the member describes themself. */
+  memberType: z.enum(MEMBER_TYPES).optional(),
+  interest: z.string().trim().max(40).optional(),
+  openTo: z.enum(OPEN_TO).optional(),
   cursor: z.string().max(200).optional(),
 });
 export type MemberSearch = z.infer<typeof memberSearchSchema>;

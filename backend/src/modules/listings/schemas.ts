@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const LISTING_CATEGORIES = ["hotel", "resort", "villa", "apartment", "supercar", "yacht", "event", "experience"] as const;
+export const LISTING_CATEGORIES = ["hotel", "resort", "villa", "apartment", "supercar", "yacht", "aviation", "event", "experience"] as const;
 export type ListingCategory = (typeof LISTING_CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Record<ListingCategory, string> = {
@@ -10,6 +10,7 @@ export const CATEGORY_LABELS: Record<ListingCategory, string> = {
   apartment: "Residences",
   supercar: "Supercars",
   yacht: "Yachts",
+  aviation: "Private aviation",
   event: "Events",
   experience: "Experiences",
 };

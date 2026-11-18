@@ -10,6 +10,7 @@ import { queueCounts } from "@backend/modules/admin/service";
 import { listCampaigns } from "@backend/modules/ads/service";
 import { hasFeature, isStaff, VERIFICATION_LABELS } from "@backend/modules/auth/permissions";
 import { suggestMembers } from "@backend/modules/discovery/service";
+import { listTrendingTags } from "@backend/modules/feed/service";
 import { browseListings, listOwnListings, listReceivedInquiries } from "@backend/modules/listings/service";
 import { getMembershipOverview } from "@backend/modules/membership/service";
 import { requirePageSession } from "@backend/auth/viewer";
@@ -243,5 +244,38 @@ function Mini({ label, value, href }: { label: string; value: number; href?: str
     </Link>
   ) : (
     <div className="flex flex-col-reverse py-2">{inner}</div>
+  );
+}
+
+/** Hashtags trending this week across posts every member can see. Hidden when nothing is trending. */
+export async function TrendingSection() {
+  const { db } = await session();
+  const result = await attempt(() => listTrendingTags(db, 8));
+  if (result.ok && result.data.length === 0) return null;
+  return (
+    <Widget title="Trending this week" href="/search?type=posts" hrefLabel="Search posts">
+      {!result.ok ? (
+        <WidgetError what="trending topics" />
+      ) : (
+        <ol className="space-y-1">
+          {result.data.map((t, i) => (
+            <li key={t.tag}>
+              <Link
+                href={`/search?type=posts&q=${encodeURIComponent(`#${t.tag}`)}`}
+                className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-surface-2"
+              >
+                <span className="w-4 text-right text-xs tabular-nums text-muted" aria-hidden="true">
+                  {i + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">#{t.tag}</span>
+                <span className="text-xs text-muted">
+                  {t.postCount} {t.postCount === 1 ? "post" : "posts"}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      )}
+    </Widget>
   );
 }

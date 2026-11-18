@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, Globe, Heart, Lock, MessageCircle, MoreHorizontal, Pencil, Send, Trash2, Users } from "lucide-react";
+import { Bookmark, Globe, Heart, Lock, MessageCircle, MoreHorizontal, Pencil, Repeat2, Send, Trash2, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { MemberLink } from "@/components/social/member-card";
@@ -54,6 +54,22 @@ export function PostCard({
       setPost((p) => ({ ...p, likeCount: res.likeCount }));
     } catch (e) {
       setPost((p) => ({ ...p, likedByViewer: !liked, likeCount: p.likeCount + (liked ? -1 : 1) }));
+      toast.show(errorMessage(e), "error");
+    }
+  }
+
+  // Reposting would widen a connections-only audience, and reposting yourself adds nothing.
+  const repostBlocked = post.isOwn ? "your own post" : post.visibility === "connections" ? "a connections-only post" : null;
+
+  async function toggleRepost() {
+    const reposted = !post.repostedByViewer;
+    setPost((p) => ({ ...p, repostedByViewer: reposted, repostCount: p.repostCount + (reposted ? 1 : -1) }));
+    try {
+      const res = await api<{ repostCount: number }>(`/api/v1/posts/${post.id}/repost`, { method: reposted ? "POST" : "DELETE" });
+      setPost((p) => ({ ...p, repostCount: res.repostCount }));
+      toast.show(reposted ? "Reposted to your network" : "Repost removed");
+    } catch (e) {
+      setPost((p) => ({ ...p, repostedByViewer: !reposted, repostCount: p.repostCount + (reposted ? -1 : 1) }));
       toast.show(errorMessage(e), "error");
     }
   }
@@ -118,6 +134,19 @@ export function PostCard({
 
   return (
     <article className="panel p-4 transition-colors hover:border-border-strong sm:p-5" aria-labelledby={`post-${post.id}-author`}>
+      {post.repostedBy ? (
+        <p className="mb-3 flex items-center gap-1.5 text-xs text-muted">
+          <Repeat2 className="size-3.5" aria-hidden="true" />
+          {post.repostedBy.handle ? (
+            <Link href={`/members/${post.repostedBy.handle}`} className="font-medium text-fg/90 hover:underline">
+              {post.repostedBy.displayName}
+            </Link>
+          ) : (
+            <span className="font-medium text-fg/90">{post.repostedBy.displayName}</span>
+          )}
+          reposted
+        </p>
+      ) : null}
       <header className="flex items-start justify-between gap-3">
         <div id={`post-${post.id}-author`} className="min-w-0">
           <MemberLink
@@ -181,7 +210,7 @@ export function PostCard({
         </div>
       ) : null}
 
-      {post.likeCount > 0 || post.commentCount > 0 ? (
+      {post.likeCount > 0 || post.commentCount > 0 || post.repostCount > 0 ? (
         <p className="mt-4 flex items-center gap-3 text-xs text-muted">
           {post.likeCount > 0 ? (
             <span className="inline-flex items-center gap-1">
@@ -191,31 +220,47 @@ export function PostCard({
               {post.likeCount} {post.likeCount === 1 ? "like" : "likes"}
             </span>
           ) : null}
-          {post.commentCount > 0 ? (
-            <button type="button" onClick={() => setShowComments(true)} className="ml-auto hover:text-fg hover:underline">
-              {post.commentCount} {post.commentCount === 1 ? "comment" : "comments"}
-            </button>
-          ) : null}
+          <span className="ml-auto flex items-center gap-3">
+            {post.commentCount > 0 ? (
+              <button type="button" onClick={() => setShowComments(true)} className="hover:text-fg hover:underline">
+                {post.commentCount} {post.commentCount === 1 ? "comment" : "comments"}
+              </button>
+            ) : null}
+            {post.repostCount > 0 ? (
+              <span>
+                {post.repostCount} {post.repostCount === 1 ? "repost" : "reposts"}
+              </span>
+            ) : null}
+          </span>
         </p>
       ) : null}
 
-      <footer className="mt-3 grid grid-cols-4 gap-1 border-t border-border pt-2 text-sm text-muted">
+      <footer className="mt-3 grid grid-cols-5 gap-1 border-t border-border pt-2 text-sm text-muted">
         <ActionButton onClick={toggleLike} disabled={!canInteract} pressed={post.likedByViewer} label={post.likedByViewer ? "Unlike" : "Like"}>
           <Heart key={popKey} className={cn("size-[18px]", post.likedByViewer && "animate-pop fill-accent text-accent")} />
-          <span className="hidden sm:inline">{post.likedByViewer ? "Liked" : "Like"}</span>
+          <span className="hidden md:inline">{post.likedByViewer ? "Liked" : "Like"}</span>
           <span className="sr-only">{post.likeCount}</span>
         </ActionButton>
         <ActionButton onClick={() => setShowComments((s) => !s)} pressed={showComments} label="Comments">
           <MessageCircle className="size-[18px]" />
-          <span className="hidden sm:inline">Comment</span>
+          <span className="hidden md:inline">Comment</span>
+        </ActionButton>
+        <ActionButton
+          onClick={toggleRepost}
+          disabled={!canInteract || Boolean(repostBlocked)}
+          pressed={post.repostedByViewer}
+          label={repostBlocked ? `Repost unavailable for ${repostBlocked}` : post.repostedByViewer ? "Undo repost" : "Repost"}
+        >
+          <Repeat2 className={cn("size-[18px]", post.repostedByViewer && "text-accent")} />
+          <span className="hidden md:inline">{post.repostedByViewer ? "Reposted" : "Repost"}</span>
         </ActionButton>
         <ActionButton onClick={toggleSave} disabled={!canInteract} pressed={post.savedByViewer} label={post.savedByViewer ? "Unsave" : "Save"}>
           <Bookmark className={cn("size-[18px]", post.savedByViewer && "fill-accent text-accent")} />
-          <span className="hidden sm:inline">{post.savedByViewer ? "Saved" : "Save"}</span>
+          <span className="hidden md:inline">{post.savedByViewer ? "Saved" : "Save"}</span>
         </ActionButton>
         <ActionButton onClick={share} label="Share">
           <Send className="size-[18px]" />
-          <span className="hidden sm:inline">Share</span>
+          <span className="hidden md:inline">Share</span>
         </ActionButton>
       </footer>
 

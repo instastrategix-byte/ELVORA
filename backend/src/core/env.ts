@@ -19,6 +19,8 @@ const serverSchema = z.object({
   RESEND_API_KEY: optionalSecret,
   EMAIL_FROM: z.string().default("ELVORA <no-reply@example.com>"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  /** Optional: enables AI writing assistance. Features that need it are hidden when unset. */
+  ANTHROPIC_API_KEY: optionalSecret,
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;

@@ -7,6 +7,7 @@ import { publicMediaUrl } from "@/lib/media";
 import { hasFeature } from "@backend/modules/auth/permissions";
 import { listFeed } from "@backend/modules/feed/service";
 import { requirePageSession } from "@backend/auth/viewer";
+import { isAiConfigured } from "@backend/modules/ai/service";
 
 /**
  * The dashboard's centre column: composer plus the member's network feed. A quiet network falls
@@ -31,7 +32,7 @@ export async function FeedSection() {
         initial={result.data}
         endpoint={`/api/v1/feed?scope=${scope}`}
         canInteract
-        composer={canPost ? { authorName: viewer.displayName, avatarUrl: publicMediaUrl("profile-media", viewer.avatarPath) } : undefined}
+        composer={canPost ? { authorName: viewer.displayName, avatarUrl: publicMediaUrl("profile-media", viewer.avatarPath), aiEnabled: isAiConfigured() } : undefined}
         header={<SponsoredSlot placement="feed" />}
         emptyTitle="Start the conversation"
         emptyDescription="No one has posted yet. Share a perspective, an opportunity or a milestone to get things going."

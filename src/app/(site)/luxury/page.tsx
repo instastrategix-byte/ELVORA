@@ -18,7 +18,7 @@ import { getSession } from "@backend/auth/viewer";
 
 export const metadata: Metadata = {
   title: "Luxury marketplace",
-  description: "Villas, residences, hotels, resorts, yachts, supercars, events and experiences from verified providers.",
+  description: "Villas, residences, hotels, resorts, yachts, supercars, private aviation, events and experiences from verified providers.",
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;

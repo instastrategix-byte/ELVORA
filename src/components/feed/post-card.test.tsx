@@ -17,8 +17,10 @@ const post: PostView = {
   updatedAt: new Date().toISOString(),
   likeCount: 2,
   commentCount: 0,
+  repostCount: 0,
   likedByViewer: false,
   savedByViewer: false,
+  repostedByViewer: false,
   isOwn: false,
   media: [],
 };
@@ -49,6 +51,26 @@ describe("PostCard", () => {
     await userEvent.click(screen.getByRole("button", { name: "Like" }));
     expect(await screen.findByText("Your account is currently restricted.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Like" })).toHaveTextContent("2");
+  });
+
+  it("reposts optimistically and reconciles with the server count", async () => {
+    const { calls } = mockFetch({ body: { data: { repostCount: 3 } } });
+    renderWithProviders(<PostCard post={post} canInteract />);
+    await userEvent.click(screen.getByRole("button", { name: "Repost" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Undo repost" })).toBeInTheDocument());
+    expect(await screen.findByText("3 reposts")).toBeInTheDocument();
+    expect(calls[0]!.url).toBe(`/api/v1/posts/${post.id}/repost`);
+  });
+
+  it("does not offer reposting for connections-only or own posts", () => {
+    renderWithProviders(<PostCard post={{ ...post, visibility: "connections" }} canInteract />);
+    expect(screen.getByRole("button", { name: /Repost unavailable/ })).toBeDisabled();
+  });
+
+  it("shows who reposted a post into the feed", () => {
+    renderWithProviders(<PostCard post={{ ...post, repostedBy: { ...post.author, id: "b", handle: "marco", displayName: "Marco Ricci" } }} canInteract />);
+    expect(screen.getByRole("link", { name: "Marco Ricci" })).toHaveAttribute("href", "/members/marco");
+    expect(screen.getByText("reposted")).toBeInTheDocument();
   });
 
   it("disables interactions for viewers who cannot interact", () => {

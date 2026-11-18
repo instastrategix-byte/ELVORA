@@ -17,6 +17,7 @@ export const SITE_MEDIA = {
     apartment: null,
     supercar: null,
     yacht: null,
+    aviation: null,
     event: null,
     experience: null,
   } satisfies Record<ListingCategory, string | null> as Record<ListingCategory, string | null>,

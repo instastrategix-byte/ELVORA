@@ -5,8 +5,9 @@ import { Skeleton } from "@/components/ui/primitives";
 import { requirePageSession } from "@backend/auth/viewer";
 import { FeedSection } from "./feed-section";
 import { IdentityCard } from "./identity";
+import { ProfileInsightsSection } from "./insights-section";
 import { EventsSection } from "./personal-sections";
-import { MarketplaceSection, MembershipSection, SuggestionsSection, WorkspacesSection } from "./sections";
+import { MarketplaceSection, MembershipSection, SuggestionsSection, TrendingSection, WorkspacesSection } from "./sections";
 import { StoriesSection } from "./stories-section";
 
 export const metadata: Metadata = { title: "Home", robots: { index: false } };
@@ -37,11 +38,17 @@ export default async function HomePage() {
             <IdentityCard />
           </Suspense>
         </div>
+        <Suspense fallback={<WidgetSkeleton rows={1} />}>
+          <ProfileInsightsSection />
+        </Suspense>
         <Suspense fallback={null}>
           <WorkspacesSection />
         </Suspense>
         <Suspense fallback={<WidgetSkeleton rows={3} />}>
           <SuggestionsSection />
+        </Suspense>
+        <Suspense fallback={null}>
+          <TrendingSection />
         </Suspense>
         <Suspense fallback={<WidgetSkeleton rows={2} />}>
           <EventsSection />
