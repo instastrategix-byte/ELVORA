@@ -63,7 +63,7 @@ test.describe("public experience", () => {
 });
 
 test.describe("access control", () => {
-  for (const path of ["/home", "/feed", "/events", "/communities", "/introductions", "/search", "/messages", "/notifications", "/account/membership", "/business", "/ads", "/admin"]) {
+  for (const path of ["/home", "/feed", "/events", "/communities", "/introductions", "/opportunities", "/saved", "/search", "/messages", "/notifications", "/account/membership", "/business", "/ads", "/admin"]) {
     test(`${path} requires sign-in`, async ({ page }) => {
       await page.goto(path);
       await expect(page).toHaveURL(new RegExp(`/sign-in\\?next=${encodeURIComponent(path).replace(/%2F/g, "(%2F|/)")}`));

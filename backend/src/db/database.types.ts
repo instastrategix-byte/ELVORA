@@ -6,6 +6,96 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      collections: {
+        Row: { id: string; owner_id: string; name: string; created_at: string; updated_at: string };
+        Insert: { name: string; id?: string; owner_id?: string; created_at?: string; updated_at?: string };
+        Update: { name?: string };
+        Relationships: [];
+      };
+      collection_items: {
+        Row: { collection_id: string; item_type: "post" | "listing"; item_id: string; added_at: string };
+        Insert: { collection_id: string; item_type: "post" | "listing"; item_id: string; added_at?: string };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      post_polls: {
+        Row: { post_id: string; question: string | null; allow_multiple: boolean; created_at: string; closes_at: string };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      post_poll_options: {
+        Row: { id: string; post_id: string; position: number; label: string };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      opportunities: {
+        Row: {
+          id: string;
+          author_id: string;
+          kind: Database["public"]["Enums"]["opportunity_kind"];
+          title: string;
+          summary: string | null;
+          details: string | null;
+          industry: string | null;
+          location: string | null;
+          remote: boolean;
+          visibility: Database["public"]["Enums"]["opportunity_visibility"];
+          amount_min_minor: number | null;
+          amount_max_minor: number | null;
+          currency: string | null;
+          status: Database["public"]["Enums"]["opportunity_status"];
+          interest_count: number;
+          expires_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          author_id: string;
+          kind: Database["public"]["Enums"]["opportunity_kind"];
+          title: string;
+          summary?: string | null;
+          details?: string | null;
+          industry?: string | null;
+          location?: string | null;
+          remote?: boolean;
+          visibility?: Database["public"]["Enums"]["opportunity_visibility"];
+          amount_min_minor?: number | null;
+          amount_max_minor?: number | null;
+          currency?: string | null;
+          expires_at?: string;
+        };
+        Update: {
+          kind?: Database["public"]["Enums"]["opportunity_kind"];
+          title?: string;
+          summary?: string | null;
+          details?: string | null;
+          industry?: string | null;
+          location?: string | null;
+          remote?: boolean;
+          visibility?: Database["public"]["Enums"]["opportunity_visibility"];
+          amount_min_minor?: number | null;
+          amount_max_minor?: number | null;
+          currency?: string | null;
+          expires_at?: string;
+          status?: Database["public"]["Enums"]["opportunity_status"];
+        };
+        Relationships: [];
+      };
+      opportunity_interests: {
+        Row: {
+          opportunity_id: string;
+          user_id: string;
+          note: string | null;
+          status: Database["public"]["Enums"]["opportunity_interest_status"];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: { opportunity_id: string; user_id: string; note?: string | null };
+        Update: { note?: string | null; status?: Database["public"]["Enums"]["opportunity_interest_status"] };
+        Relationships: [];
+      };
       introduction_requests: {
         Row: {
           id: string;
@@ -661,6 +751,8 @@ export type Database = {
           revoked_at: string | null;
           created_by: string | null;
           created_at: string;
+          is_referral: boolean;
+          note: string | null;
         };
         Insert: {
           id?: string;
@@ -1883,6 +1975,45 @@ export type Database = {
       respond_introduction_as_introducer: { Args: { p_id: string; p_forward: boolean; p_note?: string | null }; Returns: undefined };
       respond_introduction_as_target: { Args: { p_id: string; p_accept: boolean }; Returns: undefined };
       withdraw_introduction: { Args: { p_id: string }; Returns: undefined };
+      can_refer_members: { Args: { p_user?: string }; Returns: boolean };
+      create_member_invitation: {
+        Args: { p_email?: string | null; p_note?: string | null };
+        Returns: { id: string; code: string; expires_at: string }[];
+      };
+      list_member_invitations: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          email: string | null;
+          note: string | null;
+          status: string;
+          created_at: string;
+          expires_at: string | null;
+          redeemed_at: string | null;
+          redeemed_by: string | null;
+        }[];
+      };
+      revoke_member_invitation: { Args: { p_id: string }; Returns: undefined };
+      clear_poll_vote: { Args: { p_post: string }; Returns: undefined };
+      create_post_poll: {
+        Args: { p_post: string; p_options: string[]; p_question?: string | null; p_allow_multiple?: boolean; p_duration_hours?: number };
+        Returns: undefined;
+      };
+      poll_results: {
+        Args: { p_posts: string[] };
+        Returns: {
+          post_id: string;
+          question: string | null;
+          allow_multiple: boolean;
+          closes_at: string;
+          option_id: string;
+          option_position: number;
+          label: string;
+          votes: number;
+          viewer_voted: boolean;
+        }[];
+      };
+      vote_poll: { Args: { p_post: string; p_options: string[] }; Returns: undefined };
       record_ad_click: {
         Args: { p_impression: string };
         Returns: { destination_url: string | null; listing_id: string | null }[];
@@ -1989,7 +2120,11 @@ export type Database = {
       messaging_policy: "connections" | "members" | "nobody";
       moderation_action_type: "hide_content" | "remove_content" | "restore_content" | "warn" | "suspend" | "reinstate";
       introduction_status: "pending" | "forwarded" | "accepted" | "declined" | "withdrawn";
-      notification_type: "connection_request" | "connection_accepted" | "new_follower" | "post_liked" | "post_commented" | "message" | "membership_update" | "application_update" | "verification_update" | "moderation_notice" | "listing_inquiry" | "business_update" | "campaign_update" | "event_update" | "community_reply" | "community_request" | "mention" | "post_reposted" | "introduction";
+      opportunity_kind: "investment" | "partnership" | "hiring" | "board_seat" | "advisory" | "acquisition" | "other";
+      opportunity_visibility: "members" | "connections";
+      opportunity_status: "open" | "closed";
+      opportunity_interest_status: "pending" | "shortlisted" | "declined" | "withdrawn";
+      notification_type: "connection_request" | "connection_accepted" | "new_follower" | "post_liked" | "post_commented" | "message" | "membership_update" | "application_update" | "verification_update" | "moderation_notice" | "listing_inquiry" | "business_update" | "campaign_update" | "event_update" | "community_reply" | "community_request" | "mention" | "post_reposted" | "introduction" | "opportunity" | "referral_joined";
       payment_provider: "stripe" | "razorpay";
       payment_status: "pending" | "paid" | "failed" | "refunded";
       plan_audience: "individual" | "premium" | "professional" | "business" | "advertiser";

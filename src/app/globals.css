@@ -6,79 +6,79 @@
  * Contrast targets: body text >= 7:1, secondary text >= 4.5:1, accent text >= 4.5:1.
  */
 :root {
-  --bg: #09090b;
-  --surface: #111113;
-  --surface-2: #17171a;
-  --surface-3: #1f1f23;
-  --border: #242429;
-  --border-strong: #34343b;
-  --fg: #f4f3f0;
-  --muted: #a3a2a8;
-  --accent: #d1b787;
-  --accent-strong: #e6d3ad;
-  --accent-fg: #0b0b0c;
-  /* "Platinum" metal ramp: primary actions and display highlights. */
-  --gold-1: #fbfaf7;
-  --gold-2: #d9d7d1;
-  --gold-3: #a9a6a0;
-  --glow: color-mix(in oklab, #e8e4dc 10%, transparent);
-  --shadow-soft: 0 1px 0 rgb(255 255 255 / 0.035) inset, 0 18px 36px -24px rgb(0 0 0 / 0.85);
-  --shadow-lift: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 28px 56px -28px rgb(0 0 0 / 0.95), 0 0 0 1px rgb(209 183 135 / 0.16);
+  --bg: #0b0f1a;
+  --surface: #121828;
+  --surface-2: #182036;
+  --surface-3: #202a44;
+  --border: #242e4a;
+  --border-strong: #34406a;
+  --fg: #f5f1e8;
+  --muted: #a8aec0;
+  --accent: #d4af6a;
+  --accent-strong: #e8c987;
+  --accent-fg: #14100a;
+  /* Gold ramp: primary actions and display highlights. */
+  --gold-1: #f3dda6;
+  --gold-2: #d4af6a;
+  --gold-3: #a7843f;
+  --glow: color-mix(in oklab, #d4af6a 18%, transparent);
+  --shadow-soft: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 18px 40px -24px rgb(2 5 15 / 0.9);
+  --shadow-lift: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 30px 60px -28px rgb(2 5 15 / 0.95), 0 0 0 1px rgb(212 175 106 / 0.22);
   --danger: #f2777a;
-  --success: #62cf9c;
-  --warning: #e6b862;
-  --ring: #d1b787;
+  --success: #5fd0a0;
+  --warning: #e9bd63;
+  --ring: #d4af6a;
   color-scheme: dark;
 }
 
 :root[data-theme="light"] {
-  --bg: #f6f5f2;
+  --bg: #f7f4ee;
   --surface: #ffffff;
-  --surface-2: #f0efeb;
-  --surface-3: #e7e5e0;
-  --border: #e4e2dc;
-  --border-strong: #cfccc4;
-  --fg: #121214;
-  --muted: #5c5b58;
-  --accent: #7b6236;
-  --accent-strong: #5e4a27;
+  --surface-2: #f0ece3;
+  --surface-3: #e6e0d3;
+  --border: #e2dbcc;
+  --border-strong: #cdc3af;
+  --fg: #0f1626;
+  --muted: #565e72;
+  --accent: #8a6a2f;
+  --accent-strong: #6e5424;
   --accent-fg: #ffffff;
-  --gold-1: #3b3b40;
-  --gold-2: #1d1d21;
-  --gold-3: #0f0f11;
-  --glow: color-mix(in oklab, #121214 8%, transparent);
-  --shadow-soft: 0 1px 2px rgb(18 18 20 / 0.04), 0 14px 30px -20px rgb(18 18 20 / 0.16);
-  --shadow-lift: 0 2px 4px rgb(18 18 20 / 0.05), 0 26px 48px -24px rgb(18 18 20 / 0.24), 0 0 0 1px rgb(123 98 54 / 0.16);
+  --gold-1: #b08b45;
+  --gold-2: #8a6a2f;
+  --gold-3: #6e5424;
+  --glow: color-mix(in oklab, #8a6a2f 14%, transparent);
+  --shadow-soft: 0 1px 2px rgb(15 22 38 / 0.05), 0 14px 30px -20px rgb(15 22 38 / 0.18);
+  --shadow-lift: 0 2px 4px rgb(15 22 38 / 0.06), 0 26px 48px -24px rgb(15 22 38 / 0.26), 0 0 0 1px rgb(138 106 47 / 0.2);
   --danger: #b4232b;
   --success: #1e7a4c;
   --warning: #8a5a00;
-  --ring: #7b6236;
+  --ring: #8a6a2f;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
-    --bg: #f6f5f2;
+    --bg: #f7f4ee;
     --surface: #ffffff;
-    --surface-2: #f0efeb;
-    --surface-3: #e7e5e0;
-    --border: #e4e2dc;
-    --border-strong: #cfccc4;
-    --fg: #121214;
-    --muted: #5c5b58;
-    --accent: #7b6236;
-    --accent-strong: #5e4a27;
+    --surface-2: #f0ece3;
+    --surface-3: #e6e0d3;
+    --border: #e2dbcc;
+    --border-strong: #cdc3af;
+    --fg: #0f1626;
+    --muted: #565e72;
+    --accent: #8a6a2f;
+    --accent-strong: #6e5424;
     --accent-fg: #ffffff;
-    --gold-1: #3b3b40;
-    --gold-2: #1d1d21;
-    --gold-3: #0f0f11;
-    --glow: color-mix(in oklab, #121214 8%, transparent);
-    --shadow-soft: 0 1px 2px rgb(18 18 20 / 0.04), 0 14px 30px -20px rgb(18 18 20 / 0.16);
-    --shadow-lift: 0 2px 4px rgb(18 18 20 / 0.05), 0 26px 48px -24px rgb(18 18 20 / 0.24), 0 0 0 1px rgb(123 98 54 / 0.16);
+    --gold-1: #b08b45;
+    --gold-2: #8a6a2f;
+    --gold-3: #6e5424;
+    --glow: color-mix(in oklab, #8a6a2f 14%, transparent);
+    --shadow-soft: 0 1px 2px rgb(15 22 38 / 0.05), 0 14px 30px -20px rgb(15 22 38 / 0.18);
+    --shadow-lift: 0 2px 4px rgb(15 22 38 / 0.06), 0 26px 48px -24px rgb(15 22 38 / 0.26), 0 0 0 1px rgb(138 106 47 / 0.2);
     --danger: #b4232b;
     --success: #1e7a4c;
     --warning: #8a5a00;
-    --ring: #7b6236;
+    --ring: #8a6a2f;
     color-scheme: light;
   }
 }
@@ -105,7 +105,7 @@
   --color-warning: var(--warning);
   --color-ring: var(--ring);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-cormorant), ui-serif, Georgia, serif;
+  --font-display: var(--font-jakarta), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --animate-fade-in: fade-in 0.4s ease-out both;
   --animate-rise: rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   --animate-float: float 7s ease-in-out infinite;
@@ -113,6 +113,20 @@
   --animate-scale-in: scale-in 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-sheet-up: sheet-up 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-pop: pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+  --animate-page-in: page-in 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
 }
 
 @keyframes scale-in {
@@ -193,7 +207,10 @@ html {
 }
 
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(1200px 600px at 50% -200px, color-mix(in oklab, var(--accent) 7%, transparent), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--fg);
   font-family: var(--font-sans);
   font-feature-settings: "ss01", "cv11";
@@ -237,14 +254,14 @@ body::before {
 }
 
 @utility display {
-  @apply font-display font-medium tracking-tight;
+  @apply font-display font-semibold tracking-[-0.025em];
 }
 
 @utility container-page {
   @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
 }
 
-/* Platinum gradient text (graphite in the light theme). */
+/* Gold gradient text (bronze in the light theme). */
 @utility text-gold {
   background-image: linear-gradient(105deg, var(--gold-1) 0%, var(--gold-2) 45%, var(--gold-3) 100%);
   background-clip: text;
@@ -255,7 +272,7 @@ body::before {
   margin-inline-end: -0.12em;
 }
 
-/* Platinum fill for primary actions (graphite in the light theme). */
+/* Gold fill for primary actions (bronze in the light theme). */
 @utility bg-gold {
   background-image: linear-gradient(105deg, var(--gold-1) 0%, var(--gold-2) 50%, var(--gold-3) 100%);
 }
@@ -328,4 +345,39 @@ body::before {
   background-image: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
   background-size: 200% 100%;
   animation: var(--animate-shimmer);
+}
+
+/* Children reveal one after another (first 10 staggered, the rest immediately). */
+@utility stagger {
+  & > * {
+    animation: rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  & > *:nth-child(2) { animation-delay: 40ms; }
+  & > *:nth-child(3) { animation-delay: 80ms; }
+  & > *:nth-child(4) { animation-delay: 120ms; }
+  & > *:nth-child(5) { animation-delay: 160ms; }
+  & > *:nth-child(6) { animation-delay: 200ms; }
+  & > *:nth-child(7) { animation-delay: 240ms; }
+  & > *:nth-child(8) { animation-delay: 280ms; }
+  & > *:nth-child(9) { animation-delay: 320ms; }
+  & > *:nth-child(10) { animation-delay: 360ms; }
+}
+
+/* A soft light sweep across a surface on hover (used on primary buttons). */
+@utility sheen {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    transform: translateX(-120%);
+    background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / 0.35) 50%, transparent 80%);
+    transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  &:hover::after {
+    transform: translateX(120%);
+  }
 }

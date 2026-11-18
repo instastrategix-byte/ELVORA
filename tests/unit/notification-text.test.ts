@@ -23,6 +23,10 @@ describe("describeNotification", () => {
     expect(describeNotification(base({ type: "introduction", payload: { status: "accepted" } })).href).toBe("/introductions?tab=sent");
   });
 
+  it("tells inviters when someone applies with their invitation", () => {
+    expect(describeNotification(base({ type: "referral_joined" }))).toEqual({ text: "Ana applied to ELVORA with your invitation", href: "/account/referrals" });
+  });
+
   it("still describes event updates", () => {
     expect(describeNotification(base({ type: "event_update", payload: { status: "cancelled", title: "Gala" } })).text).toBe("“Gala” has been cancelled");
   });

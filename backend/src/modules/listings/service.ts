@@ -389,3 +389,12 @@ export async function businessContactForListing(db: DbClient, listingId: string)
   const business = unwrap(await db.from("businesses").select("contact_email").eq("id", listing.business_id).maybeSingle());
   return { email: business?.contact_email ?? null, title: listing.title };
 }
+
+/** Listing cards for specific ids, in the given order. Hidden or unpublished listings are skipped (RLS). */
+export async function getListingCardsByIds(db: DbClient, viewer: Viewer, ids: string[]): Promise<ListingCard[]> {
+  if (ids.length === 0) return [];
+  const rows = unwrap(await db.from("listings").select(LISTING_COLUMNS).in("id", ids.slice(0, 200)).eq("status", "published"));
+  const cards = await toCards(db, viewer, rows);
+  const byId = new Map(cards.map((c) => [c.id, c]));
+  return ids.map((id) => byId.get(id)).filter((c): c is ListingCard => Boolean(c));
+}

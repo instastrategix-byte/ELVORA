@@ -3,6 +3,7 @@ const PROTECTED_PREFIXES = [
   "/home",
   "/feed",
   "/events",
+  "/opportunities",
   "/communities",
   "/search",
   "/connections",

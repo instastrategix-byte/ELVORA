@@ -3,15 +3,15 @@ import { CATEGORY_LABELS, type ListingCategory } from "@backend/modules/listings
 import { cn } from "@/lib/utils";
 
 const ART: Record<ListingCategory, { icon: typeof Hotel; tint: string }> = {
-  hotel: { icon: Hotel, tint: "#2a2620" },
-  resort: { icon: Trees, tint: "#1d2624" },
-  villa: { icon: Building, tint: "#2b2520" },
-  apartment: { icon: Gem, tint: "#22232b" },
-  supercar: { icon: Car, tint: "#2b2222" },
-  yacht: { icon: Sailboat, tint: "#1c232b" },
-  aviation: { icon: Plane, tint: "#20242a" },
-  event: { icon: PartyPopper, tint: "#262229" },
-  experience: { icon: Anchor, tint: "#252720" },
+  hotel: { icon: Hotel, tint: "#3a2e1c" },
+  resort: { icon: Trees, tint: "#173029" },
+  villa: { icon: Building, tint: "#3b2a1c" },
+  apartment: { icon: Gem, tint: "#222a48" },
+  supercar: { icon: Car, tint: "#3a1f22" },
+  yacht: { icon: Sailboat, tint: "#15294a" },
+  aviation: { icon: Plane, tint: "#1d2a44" },
+  event: { icon: PartyPopper, tint: "#2e2142" },
+  experience: { icon: Anchor, tint: "#2d321c" },
 };
 
 /**
@@ -51,13 +51,13 @@ export function CategoryArt({
       {...a11y}
       className={cn("relative overflow-hidden", className)}
       style={{
-        backgroundImage: `radial-gradient(120% 90% at 85% 10%, ${tint} 0%, #0c0c0d 62%), linear-gradient(160deg, ${tint}66, #08080a)`,
+        backgroundImage: `radial-gradient(120% 90% at 85% 10%, ${tint} 0%, #0b0f1a 62%), linear-gradient(160deg, ${tint}66, #080b14)`,
       }}
     >
       <svg className="absolute inset-0 size-full opacity-[0.16]" aria-hidden="true">
         <defs>
           <pattern id={`lines-${category}`} width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
-            <line x1="0" y1="0" x2="0" y2="22" stroke="#d1b787" strokeWidth="0.5" />
+            <line x1="0" y1="0" x2="0" y2="22" stroke="#d4af6a" strokeWidth="0.5" />
           </pattern>
           <radialGradient id={`fade-${category}`} cx="80%" cy="15%" r="90%">
             <stop offset="0%" stopColor="white" stopOpacity="1" />
@@ -69,13 +69,13 @@ export function CategoryArt({
         </defs>
         <rect width="100%" height="100%" fill={`url(#lines-${category})`} mask={`url(#mask-${category})`} />
       </svg>
-      <div className="absolute inset-3 rounded-[inherit] border border-white/10" aria-hidden="true" />
+      <div className="absolute inset-3 rounded-[inherit] border border-[#d4af6a]/20" aria-hidden="true" />
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-        <span className="flex size-14 items-center justify-center rounded-full border border-white/20 bg-black/20 backdrop-blur-sm">
-          <Icon className="size-6 text-[#ece9e2]" strokeWidth={1.2} aria-hidden="true" />
+        <span className="flex size-14 items-center justify-center rounded-full border border-[#d4af6a]/35 bg-black/20 backdrop-blur-sm">
+          <Icon className="size-6 text-[#e8c987]" strokeWidth={1.2} aria-hidden="true" />
         </span>
         {showName ? (
-          <span className="font-display text-xl tracking-[0.18em] text-[#f4f3f0]/80 uppercase">{CATEGORY_LABELS[category]}</span>
+          <span className="font-display text-xl tracking-[0.18em] text-[#f3dda6]/85 uppercase">{CATEGORY_LABELS[category]}</span>
         ) : null}
       </div>
     </div>

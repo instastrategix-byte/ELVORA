@@ -16,6 +16,8 @@ import { POST_MAX_LENGTH } from "@backend/modules/feed/schemas";
 import type { PostView } from "@backend/modules/feed/types";
 import { Comments } from "./comments";
 import { MediaGallery } from "./media-gallery";
+import { AddToCollectionButton } from "@/components/collections/collection-picker";
+import { Poll } from "./poll";
 import { RichText } from "./rich-text";
 
 const VISIBILITY = {
@@ -204,6 +206,8 @@ export function PostCard({
         <RichText text={post.body} className="mt-3.5" />
       ) : null}
 
+      {post.poll ? <Poll postId={post.id} poll={post.poll} canVote={canInteract} /> : null}
+
       {post.media.length ? (
         <div className="mt-4">
           <MediaGallery media={post.media} />
@@ -263,6 +267,14 @@ export function PostCard({
           <span className="hidden md:inline">Share</span>
         </ActionButton>
       </footer>
+
+      {post.savedByViewer && canInteract ? (
+        <div className="mt-2 flex items-center justify-end gap-2 text-xs text-muted">
+          <span>Saved</span>
+          <span aria-hidden="true">·</span>
+          <AddToCollectionButton itemType="post" itemId={post.id} />
+        </div>
+      ) : null}
 
       {showComments ? (
         <Comments postId={post.id} canComment={canInteract} onCountChange={(delta) => setPost((p) => ({ ...p, commentCount: Math.max(0, p.commentCount + delta) }))} />

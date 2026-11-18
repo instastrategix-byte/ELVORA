@@ -1,4 +1,5 @@
-import { BadgeCheck, Lock } from "lucide-react";
+import { VerifiedTick } from "@/components/ui/verified-badge";
+import { Lock } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { VerificationForm } from "@/components/account/verification-form";
@@ -54,7 +55,7 @@ export default async function VerificationPage() {
           {(Object.keys(REQUIREMENTS) as VerificationKind[]).map((k) => (
             <Card key={k} className="space-y-3 p-5">
               <p className="flex items-center gap-2 font-medium">
-                <BadgeCheck className="size-4 text-accent" aria-hidden="true" /> {VERIFICATION_LABELS[k]}
+                <VerifiedTick tier={k === "identity" ? "identity" : "distinguished"} label="" /> {VERIFICATION_LABELS[k]}
               </p>
               <p className="text-sm text-muted">{REQUIREMENTS[k].who}</p>
               <ul className="list-disc space-y-1 pl-5 text-sm">

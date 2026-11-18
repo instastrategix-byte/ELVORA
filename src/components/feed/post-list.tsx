@@ -52,7 +52,7 @@ export function PostList({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="stagger space-y-5">
       {composer ? <PostComposer {...composer} onCreated={(p) => setPosts((prev) => [p, ...prev])} /> : null}
       {header}
       {posts.length === 0 ? (

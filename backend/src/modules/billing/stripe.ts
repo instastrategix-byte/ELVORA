@@ -44,6 +44,11 @@ export class StripeProvider implements PaymentProvider {
       subscription_data: { metadata, ...(req.trialDays > 0 ? { trial_period_days: req.trialDays } : {}) },
       success_url: req.successUrl,
       cancel_url: req.cancelUrl,
+      // No payment_method_types: Stripe shows every method enabled in the Dashboard that suits the
+      // customer's location and currency (cards, Apple Pay, Google Pay, Link and local methods).
+      locale: "auto",
+      billing_address_collection: "auto",
+      allow_promotion_codes: true,
     });
     if (!session.url) throw new AppError("payment_failed", "Checkout could not be started.");
     return { url: session.url };

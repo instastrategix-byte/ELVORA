@@ -2,6 +2,16 @@ import type { ProfileSummary } from "@backend/modules/profiles/types";
 
 export type PostMedia = { id: string; type: "image" | "video"; url: string | null; alt: string | null };
 
+export type PostPoll = {
+  question: string | null;
+  options: { id: string; label: string; votes: number; voted: boolean }[];
+  /** Total choices cast (a member picking several options in a multi-choice poll counts each). */
+  totalVotes: number;
+  closesAt: string;
+  closed: boolean;
+  allowMultiple: boolean;
+};
+
 export type PostView = {
   id: string;
   author: ProfileSummary;
@@ -19,6 +29,7 @@ export type PostView = {
   repostedBy?: ProfileSummary | null;
   isOwn: boolean;
   media: PostMedia[];
+  poll?: PostPoll | null;
 };
 
 export type CommentView = {

@@ -1,13 +1,14 @@
 import { ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CancelSubscriptionButton, CheckoutButton, WithdrawApplicationButton } from "@/components/account/billing-actions";
+import { CancelSubscriptionButton, PaymentOptions, WithdrawApplicationButton } from "@/components/account/billing-actions";
 import { ServiceNotice } from "@/components/feedback/service-notice";
 import { PlanCard } from "@/components/membership/plan-card";
 import { StatusBadge } from "@/components/membership/status-badge";
 import { Button } from "@/components/ui/button";
 import { Alert, Card } from "@/components/ui/primitives";
 import { formatDate, formatMoney } from "@/lib/format";
+import { configuredProviders } from "@backend/modules/billing/service";
 import { getMembershipOverview } from "@backend/modules/membership/service";
 import type { MembershipOverview, Plan } from "@backend/modules/membership/types";
 import { requirePageSession } from "@backend/auth/viewer";
@@ -185,14 +186,17 @@ function PlanAction({ plan, overview }: { plan: Plan; overview: MembershipOvervi
   const eligible = overview.eligiblePlanIds.includes(plan.id);
 
   if (eligible) {
-    const purchasable = plan.prices.filter((p) => p.providers.length > 0);
+    const configured = configuredProviders();
+    const purchasable = plan.prices
+      .map((p) => ({ ...p, available: p.providers.filter((id) => configured.includes(id)) }))
+      .filter((p) => p.available.length > 0);
     if (!purchasable.length) {
       return <p className="text-sm text-muted">Approved. Online payment isn&apos;t enabled for this plan yet — our team will contact you to activate it.</p>;
     }
     return (
-      <div className="flex flex-wrap gap-2">
+      <div className="space-y-4">
         {purchasable.map((p) => (
-          <CheckoutButton key={p.id} priceId={p.id} label={`Pay ${formatMoney(p.amountMinor, p.currency)} / ${p.interval}`} />
+          <PaymentOptions key={p.id} priceId={p.id} providers={p.available} amountLabel={`${formatMoney(p.amountMinor, p.currency)} / ${p.interval}`} />
         ))}
       </div>
     );

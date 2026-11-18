@@ -10,13 +10,27 @@ export const attachmentSchema = z.object({
   alt: z.string().trim().max(300).optional(),
 });
 
+export const POLL_MIN_OPTIONS = 2;
+export const POLL_MAX_OPTIONS = 4;
+
+export const pollInputSchema = z.object({
+  options: z
+    .array(z.string().trim().min(1, { error: "Options can't be empty" }).max(80))
+    .min(POLL_MIN_OPTIONS, { error: "Add at least 2 options" })
+    .max(POLL_MAX_OPTIONS, { error: "Polls can have up to 4 options" })
+    .refine((o) => new Set(o.map((x) => x.toLowerCase())).size === o.length, { error: "Options must be different" }),
+  allowMultiple: z.boolean().default(false),
+  durationHours: z.number().int().min(1).max(336).default(72),
+});
+
 export const createPostSchema = z
   .object({
     body: z.string().trim().max(POST_MAX_LENGTH, { error: `Posts are limited to ${POST_MAX_LENGTH} characters` }),
     visibility: z.enum(VISIBILITIES).default("members"),
     attachments: z.array(attachmentSchema).max(MAX_ATTACHMENTS).default([]),
+    poll: pollInputSchema.optional(),
   })
-  .refine((p) => p.body.length > 0 || p.attachments.length > 0, {
+  .refine((p) => p.body.length > 0 || p.attachments.length > 0 || Boolean(p.poll), {
     error: "Write something or attach media",
     path: ["body"],
   });
@@ -26,6 +40,8 @@ export const updatePostSchema = z.object({
   body: z.string().trim().max(POST_MAX_LENGTH).optional(),
   visibility: z.enum(VISIBILITIES).optional(),
 });
+
+export const pollVoteSchema = z.object({ optionIds: z.array(z.uuid()).min(1).max(POLL_MAX_OPTIONS) });
 
 export const commentSchema = z.object({
   body: z.string().trim().min(1, { error: "Comment cannot be empty" }).max(2000),

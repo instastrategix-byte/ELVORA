@@ -1,3 +1,4 @@
+import { VerifiedTick } from "@/components/ui/verified-badge";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -76,7 +77,7 @@ export default function HomePage() {
               <Sparkles className="size-3.5" aria-hidden="true" /> Membership by review
             </p>
             <h1 className="display animate-rise text-5xl leading-[1.02] [animation-delay:80ms] sm:text-7xl xl:text-[5.25rem]">
-              The private network for <span className="text-gold italic">distinguished</span> lives.
+              The private network for <span className="text-gold">distinguished</span> lives.
             </h1>
             <p className="animate-rise max-w-xl text-lg leading-8 text-muted [animation-delay:160ms]">
               ELVORA brings together founders, executives, public figures and the finest luxury businesses — with verified identities,
@@ -117,7 +118,7 @@ export default function HomePage() {
                 />
                 <div className="panel animate-float p-5 backdrop-blur">
                   <p className="flex items-center gap-2 text-sm font-medium">
-                    <BadgeCheck className="size-4 text-accent" /> Verified executive
+                    <VerifiedTick tier="distinguished" label="" /> Verified executive
                   </p>
                   <p className="mt-2 text-xs leading-5 text-muted">Badges reflect independent review — never payment.</p>
                 </div>
@@ -183,7 +184,7 @@ export default function HomePage() {
             <div className="space-y-4">
               <p className="eyebrow">The marketplace</p>
               <h2 id="discover-heading" className="display text-4xl sm:text-5xl">
-                Curated, verified, <span className="text-gold italic">exceptional.</span>
+                Curated, verified, <span className="text-gold">exceptional.</span>
               </h2>
               <p className="max-w-lg text-muted">Every provider is reviewed before they can publish. Inquiries go straight to them — never a booking you didn&apos;t agree to.</p>
             </div>
@@ -224,7 +225,7 @@ export default function HomePage() {
           <div className="space-y-4 lg:sticky lg:top-28 lg:self-start">
             <p className="eyebrow">How membership works</p>
             <h2 id="how" className="display text-4xl sm:text-5xl">
-              Considered, <span className="text-gold italic">not crowded.</span>
+              Considered, <span className="text-gold">not crowded.</span>
             </h2>
             <p className="text-muted">
               Paying for a plan never makes anyone a verified celebrity, executive or business. Identity, business verification, membership and staff
@@ -284,7 +285,7 @@ export default function HomePage() {
           <Lock className="size-5" aria-hidden="true" />
         </span>
         <h2 className="display mx-auto mt-6 max-w-3xl text-4xl sm:text-6xl">
-          Your circle, <span className="text-gold italic">by invitation</span> and review.
+          Your circle, <span className="text-gold">by invitation</span> and review.
         </h2>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Button asChild size="lg">

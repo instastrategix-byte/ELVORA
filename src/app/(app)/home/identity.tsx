@@ -1,4 +1,5 @@
-import { BadgeCheck, Pencil } from "lucide-react";
+import { VerifiedTick } from "@/components/ui/verified-badge";
+import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { Meter } from "@/components/dashboard/widgets";
 import { Avatar } from "@/components/ui/primitives";
@@ -41,7 +42,13 @@ export async function IdentityCard() {
         <Link href={`/members/${viewer.handle}`} className="mt-3 block hover:opacity-90">
           <h2 className="flex items-center gap-1.5 text-lg font-semibold">
             {viewer.displayName}
-            {viewer.verifiedKinds.length > 0 ? <BadgeCheck className="size-4 text-accent" aria-label={VERIFICATION_LABELS[viewer.verifiedKinds[0]!]} /> : null}
+            {viewer.verifiedKinds.length > 0 ? (
+              <VerifiedTick
+                tier={viewer.verifiedKinds.some((k) => k !== "identity") ? "distinguished" : "identity"}
+                label={viewer.verifiedKinds.map((k) => VERIFICATION_LABELS[k]).join(", ")}
+                size={18}
+              />
+            ) : null}
           </h2>
           <p className="text-sm text-muted">@{viewer.handle}</p>
         </Link>

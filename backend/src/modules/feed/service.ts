@@ -7,8 +7,8 @@ import type { Viewer } from "@backend/modules/auth/permissions";
 import { getSummaries } from "@backend/modules/profiles/service";
 import { assertOwnedPath, signedUrls } from "@backend/modules/storage/service";
 import { throwIfError, unwrap } from "@backend/http/db-errors";
-import type { commentSchema, createPostSchema, reportSchema, updatePostSchema } from "./schemas";
-import type { CommentView, PostView, TrendingTag } from "./types";
+import type { commentSchema, createPostSchema, pollVoteSchema, reportSchema, updatePostSchema } from "./schemas";
+import type { CommentView, PostPoll, PostView, TrendingTag } from "./types";
 
 const PAGE_SIZE = 15;
 const POST_COLUMNS = "id, author_id, body, visibility, status, like_count, comment_count, repost_count, created_at, updated_at";
@@ -33,12 +33,13 @@ async function hydrate(db: DbClient, viewer: Viewer | null, rows: PostRow[], rep
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
   const none = Promise.resolve({ data: [], error: null });
-  const [authors, mediaRes, likesRes, savesRes, repostsRes] = await Promise.all([
+  const [authors, mediaRes, likesRes, savesRes, repostsRes, polls] = await Promise.all([
     getSummaries(db, [...rows.map((r) => r.author_id), ...(reposters ? [...reposters.values()] : [])]),
     db.from("post_media").select("id, post_id, storage_path, media_type, alt_text, position").in("post_id", ids).order("position"),
     viewer ? db.from("post_likes").select("post_id").eq("user_id", viewer.id).in("post_id", ids) : Promise.resolve({ data: [], error: null }),
     viewer ? db.from("post_saves").select("post_id").eq("user_id", viewer.id).in("post_id", ids) : none,
     viewer ? db.from("post_reposts").select("post_id").eq("user_id", viewer.id).in("post_id", ids) : none,
+    loadPolls(db, ids),
   ]);
   const media = unwrap(mediaRes);
   const urls = await signedUrls(db, "post-media", media.map((m) => m.storage_path));
@@ -64,7 +65,49 @@ async function hydrate(db: DbClient, viewer: Viewer | null, rows: PostRow[], rep
     media: media
       .filter((m) => m.post_id === r.id)
       .map((m) => ({ id: m.id, type: m.media_type, url: urls.get(m.storage_path) ?? null, alt: m.alt_text })),
+    poll: polls.get(r.id) ?? null,
   }));
+}
+
+/** Poll results for a page of posts in one call. Counts only; visibility is checked in SQL. */
+async function loadPolls(db: DbClient, postIds: string[]): Promise<Map<string, PostPoll>> {
+  const map = new Map<string, PostPoll>();
+  if (postIds.length === 0) return map;
+  const rows = unwrap(await db.rpc("poll_results", { p_posts: postIds })) ?? [];
+  const now = Date.now();
+  for (const r of rows) {
+    let poll = map.get(r.post_id);
+    if (!poll) {
+      poll = {
+        question: r.question,
+        options: [],
+        totalVotes: 0,
+        closesAt: r.closes_at,
+        closed: new Date(r.closes_at).getTime() <= now,
+        allowMultiple: r.allow_multiple,
+      };
+      map.set(r.post_id, poll);
+    }
+    poll.options.push({ id: r.option_id, label: r.label, votes: Number(r.votes), voted: r.viewer_voted });
+    poll.totalVotes += Number(r.votes);
+  }
+  return map;
+}
+
+/** Records (or replaces) the viewer's vote and returns fresh aggregate results. */
+export async function votePoll(db: DbClient, postId: string, input: z.infer<typeof pollVoteSchema>): Promise<PostPoll> {
+  unwrap(await db.rpc("vote_poll", { p_post: postId, p_options: input.optionIds }));
+  const poll = (await loadPolls(db, [postId])).get(postId);
+  if (!poll) throw new AppError("not_found", "Poll not found.");
+  return poll;
+}
+
+/** Removes the viewer's vote while the poll is open. */
+export async function clearPollVote(db: DbClient, postId: string): Promise<PostPoll> {
+  unwrap(await db.rpc("clear_poll_vote", { p_post: postId }));
+  const poll = (await loadPolls(db, [postId])).get(postId);
+  if (!poll) throw new AppError("not_found", "Poll not found.");
+  return poll;
 }
 
 const REPOST_WINDOW_DAYS = 30;
@@ -209,6 +252,19 @@ export async function createPost(db: DbClient, viewer: Viewer, input: z.infer<ty
       throwIfError(error, "Attachments could not be saved.");
     }
   }
+  if (input.poll) {
+    const { error } = await db.rpc("create_post_poll", {
+      p_post: post.id,
+      p_options: input.poll.options,
+      p_allow_multiple: input.poll.allowMultiple,
+      p_duration_hours: input.poll.durationHours,
+    });
+    if (error) {
+      // Nothing half-exists: a post meant to carry a poll is removed if the poll can't be created.
+      await db.from("posts").delete().eq("id", post.id);
+      throwIfError(error, "The poll could not be created.");
+    }
+  }
   const [view] = await hydrate(db, viewer, [post]);
   return view!;
 }
@@ -329,4 +385,13 @@ export async function createReport(db: DbClient, viewer: Viewer, input: z.infer<
   });
   if (error?.code === "23505") throw new AppError("conflict", "You have already reported this. Our team is reviewing it.");
   throwIfError(error);
+}
+
+/** Posts for specific ids, in the given order. Posts the viewer can no longer see are skipped (RLS). */
+export async function getPostsByIds(db: DbClient, viewer: Viewer, ids: string[]): Promise<PostView[]> {
+  if (ids.length === 0) return [];
+  const rows = unwrap(await db.from("posts").select(POST_COLUMNS).in("id", ids.slice(0, 200)).eq("status", "published"));
+  const views = await hydrate(db, viewer, rows);
+  const byId = new Map(views.map((v) => [v.id, v]));
+  return ids.map((id) => byId.get(id)).filter((v): v is PostView => Boolean(v));
 }

@@ -3,6 +3,7 @@
 import {
   Bell,
   Bookmark,
+  Briefcase,
   Building2,
   CalendarDays,
   Compass,
@@ -20,6 +21,7 @@ import {
   Settings,
   ShieldCheck,
   User,
+  UserPlus,
   Users,
   UsersRound,
   type LucideIcon,
@@ -45,6 +47,7 @@ const MAIN: NavItem[] = [
 const EXPLORE: NavItem[] = [
   { href: "/luxury", label: "Marketplace", icon: Gem },
   { href: "/events", label: "Events", icon: CalendarDays },
+  { href: "/opportunities", label: "Opportunities", icon: Briefcase },
   { href: "/communities", label: "Communities", icon: UsersRound },
   { href: "/saved", label: "Saved", icon: Bookmark },
 ];
@@ -52,6 +55,7 @@ const EXPLORE: NavItem[] = [
 const YOU: NavItem[] = [
   { href: "/profile", label: "My profile", icon: User },
   { href: "/account/membership", label: "Membership", icon: CreditCard },
+  { href: "/account/referrals", label: "Invite members", icon: UserPlus },
   { href: "/account/settings", label: "Settings", icon: Settings },
   { href: "/help", label: "Help & support", icon: LifeBuoy },
 ];

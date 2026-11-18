@@ -79,6 +79,15 @@ export function describeNotification(n: NotificationView): { text: string; href:
                 : "Introduction update";
       return { text, href: st === "pending" ? "/introductions" : st === "forwarded" ? "/introductions?tab=received" : "/introductions?tab=sent" };
     }
+    case "referral_joined":
+      return { text: `${who} applied to ELVORA with your invitation`, href: "/account/referrals" };
+    case "opportunity": {
+      const title = typeof n.payload.title === "string" ? `“${n.payload.title}”` : "your opportunity";
+      const href = n.entityId ? `/opportunities/${n.entityId}` : "/opportunities";
+      if (n.payload.status === "shortlisted") return { text: `${who} shortlisted you for ${title}`, href };
+      if (n.payload.status === "declined") return { text: `${who} passed on your interest in ${title}`, href };
+      return { text: `${who} is interested in ${title}`, href };
+    }
     default:
       return { text: "You have a new notification", href: null };
   }

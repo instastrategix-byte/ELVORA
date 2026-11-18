@@ -1,4 +1,5 @@
-import { BadgeCheck, Building2, Gem, Inbox, Megaphone, ShieldCheck, Sparkles } from "lucide-react";
+import { VerifiedTick } from "@/components/ui/verified-badge";
+import { Building2, Gem, Inbox, Megaphone, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Widget, WidgetError } from "@/components/dashboard/widgets";
 import { MemberLink } from "@/components/social/member-card";
@@ -106,7 +107,7 @@ export async function MembershipSection() {
             <div className="flex flex-wrap gap-1.5">
               {viewer.verifiedKinds.map((k) => (
                 <Badge key={k} tone="accent">
-                  <BadgeCheck className="size-3" aria-hidden="true" /> {VERIFICATION_LABELS[k]}
+                  <VerifiedTick tier={k === "identity" ? "identity" : "distinguished"} label="" size={13} /> {VERIFICATION_LABELS[k]}
                 </Badge>
               ))}
             </div>
@@ -150,7 +151,7 @@ export async function MarketplaceSection() {
                     {[l.city, l.country].filter(Boolean).join(", ") || titleCase(l.category)}
                   </span>
                   <span className="mt-0.5 flex items-center gap-1 text-[11px] text-muted">
-                    {l.business.verified ? <BadgeCheck className="size-3 text-accent" aria-hidden="true" /> : null}
+                    {l.business.verified ? <VerifiedTick tier="business" label="" size={12} /> : null}
                     {l.business.name}
                     {l.business.verified ? <span className="sr-only">(verified business)</span> : null}
                   </span>

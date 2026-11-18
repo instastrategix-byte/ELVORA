@@ -1,6 +1,6 @@
 "use client";
 
-import { ImagePlus, Sparkles, Video, X } from "lucide-react";
+import { BarChart3, ImagePlus, Plus, Sparkles, Video, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, Textarea } from "@/components/ui/form";
@@ -9,7 +9,7 @@ import { Alert, Avatar } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api-client";
 import { uploadFile } from "@/lib/upload";
-import { MAX_ATTACHMENTS, POST_MAX_LENGTH } from "@backend/modules/feed/schemas";
+import { MAX_ATTACHMENTS, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POST_MAX_LENGTH } from "@backend/modules/feed/schemas";
 import type { PostView } from "@backend/modules/feed/types";
 
 type Attachment = { key: string; file: File; preview: string; type: "image" | "video"; path?: string; status: "uploading" | "ready" | "failed" };
@@ -58,7 +58,23 @@ export function PostComposer({
 
   const uploading = attachments.some((a) => a.status === "uploading");
   const failed = attachments.some((a) => a.status === "failed");
-  const canPost = !posting && !uploading && !failed && (body.trim().length > 0 || attachments.length > 0);
+  const [pollOpen, setPollOpen] = useState(false);
+  const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
+  const [pollHours, setPollHours] = useState(72);
+  const [pollMultiple, setPollMultiple] = useState(false);
+  const cleanOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
+  const pollValid =
+    !pollOpen ||
+    (cleanOptions.length >= POLL_MIN_OPTIONS && new Set(cleanOptions.map((o) => o.toLowerCase())).size === cleanOptions.length);
+  const canPost =
+    !posting && !uploading && !failed && pollValid && (body.trim().length > 0 || attachments.length > 0 || (pollOpen && cleanOptions.length >= POLL_MIN_OPTIONS));
+
+  function resetPoll() {
+    setPollOpen(false);
+    setPollOptions(["", ""]);
+    setPollHours(72);
+    setPollMultiple(false);
+  }
 
   async function addFiles(files: FileList | null, type: "image" | "video") {
     if (!files) return;
@@ -100,11 +116,13 @@ export function PostComposer({
           body: body.trim(),
           visibility,
           attachments: attachments.map((a) => ({ path: a.path, type: a.type })),
+          ...(pollOpen ? { poll: { options: cleanOptions, allowMultiple: pollMultiple, durationHours: pollHours } } : {}),
         },
       });
       attachments.forEach((a) => URL.revokeObjectURL(a.preview));
       setBody("");
       setAttachments([]);
+      resetPoll();
       onCreated(post);
       toast.show("Posted");
     } catch (e) {
@@ -191,6 +209,60 @@ export function PostComposer({
         </div>
       ) : null}
 
+      {pollOpen ? (
+        <fieldset className="mt-3 space-y-2 rounded-xl border border-border p-3">
+          <legend className="px-1 text-xs font-medium text-muted">Poll options</legend>
+          {pollOptions.map((value, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <label htmlFor={`poll-option-${i}`} className="sr-only">
+                Option {i + 1}
+              </label>
+              <input
+                id={`poll-option-${i}`}
+                value={value}
+                maxLength={80}
+                placeholder={`Option ${i + 1}`}
+                onChange={(e) => setPollOptions((o) => o.map((x, j) => (j === i ? e.target.value : x)))}
+                className="h-10 flex-1 rounded-lg border border-border bg-surface px-3 text-sm focus:border-accent focus:outline-none"
+              />
+              {pollOptions.length > POLL_MIN_OPTIONS ? (
+                <button
+                  type="button"
+                  onClick={() => setPollOptions((o) => o.filter((_, j) => j !== i))}
+                  className="rounded-full p-1.5 text-muted hover:bg-surface-2 hover:text-fg"
+                  aria-label={`Remove option ${i + 1}`}
+                >
+                  <X className="size-4" />
+                </button>
+              ) : null}
+            </div>
+          ))}
+          <div className="flex flex-wrap items-center gap-3 pt-1 text-sm">
+            {pollOptions.length < POLL_MAX_OPTIONS ? (
+              <button type="button" onClick={() => setPollOptions((o) => [...o, ""])} className="inline-flex items-center gap-1 font-medium text-accent hover:underline">
+                <Plus className="size-4" aria-hidden="true" /> Add option
+              </button>
+            ) : null}
+            <label className="flex items-center gap-2 text-muted">
+              Runs for
+              <Select value={pollHours} onChange={(e) => setPollHours(Number(e.target.value))} className="h-8 w-auto text-sm">
+                <option value={24}>1 day</option>
+                <option value={72}>3 days</option>
+                <option value={168}>1 week</option>
+              </Select>
+            </label>
+            <label className="flex items-center gap-2 text-muted">
+              <input type="checkbox" checked={pollMultiple} onChange={(e) => setPollMultiple(e.target.checked)} className="accent-[var(--accent)]" />
+              Allow multiple choices
+            </label>
+            <button type="button" onClick={resetPoll} className="ml-auto text-xs text-muted hover:text-fg">
+              Remove poll
+            </button>
+          </div>
+          {!pollValid && cleanOptions.length >= POLL_MIN_OPTIONS ? <p className="text-xs text-danger">Options must be different.</p> : null}
+        </fieldset>
+      ) : null}
+
       {error ? (
         <Alert tone="error" className="mt-3">
           {error}
@@ -205,6 +277,9 @@ export function PostComposer({
         </Button>
         <Button variant="ghost" size="sm" onClick={() => videoInput.current?.click()} disabled={attachments.length >= MAX_ATTACHMENTS}>
           <Video className="text-accent" /> Video
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => setPollOpen(true)} disabled={pollOpen} aria-pressed={pollOpen}>
+          <BarChart3 className="text-accent" /> Poll
         </Button>
         {aiEnabled ? (
           <Menu>
