@@ -19,10 +19,10 @@ const TABS = [
 ] as const;
 
 export default async function IntroductionsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const { viewer, db } = await requirePageSession({ next: "/introductions" });
+  const { db } = await requirePageSession({ next: "/introductions" });
   const sp = await searchParams;
   const tab = TABS.some((t) => t.key === sp.tab) ? (sp.tab as (typeof TABS)[number]["key"]) : "review";
-  const result = await attempt(() => listIntroductions(db, viewer));
+  const result = await attempt(() => listIntroductions(db));
 
   return (
     <div className="mx-auto max-w-3xl">

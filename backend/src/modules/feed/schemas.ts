@@ -53,7 +53,7 @@ export const feedQuerySchema = z.object({
 });
 
 export const REPORT_REASONS = ["spam", "harassment", "impersonation", "fraud", "inappropriate", "intellectual_property", "other"] as const;
-export const REPORT_TARGETS = ["post", "comment", "profile", "listing", "business", "message"] as const;
+export const REPORT_TARGETS = ["post", "comment", "profile", "listing", "business", "message", "reel"] as const;
 
 export const reportSchema = z.object({
   targetType: z.enum(REPORT_TARGETS),

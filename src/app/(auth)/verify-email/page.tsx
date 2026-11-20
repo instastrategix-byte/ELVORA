@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ResendVerificationForm } from "@/components/auth/auth-forms";
 import { Skeleton } from "@/components/ui/primitives";
+import { resendRetryAt } from "@backend/modules/auth/resend-limit";
 
 export const metadata: Metadata = { title: "Verify your email" };
 
@@ -31,10 +32,13 @@ export default function VerifyEmailPage({ searchParams }: { searchParams: Search
 
 async function Resend({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
+  const email = typeof sp.email === "string" ? sp.email : undefined;
+  // Wait left from the sign-up email (or earlier resends) in this browser, so the countdown starts at once.
+  const retryAt = email ? await resendRetryAt("verify", email) : undefined;
   return (
     <div className="rounded-2xl border border-border bg-surface p-5">
       <p className="mb-4 text-sm text-muted">Didn&apos;t receive it? Check spam, or request another link.</p>
-      <ResendVerificationForm email={typeof sp.email === "string" ? sp.email : undefined} />
+      <ResendVerificationForm email={email} retryAt={retryAt} />
     </div>
   );
 }

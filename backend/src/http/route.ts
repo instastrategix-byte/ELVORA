@@ -151,7 +151,12 @@ async function readJson(request: Request, maxBytes: number): Promise<unknown> {
  */
 export function assertSameOrigin(request: Request): void {
   const origin = request.headers.get("origin");
-  if (!origin) return; // same-origin navigations from older browsers and server-to-server calls
+  if (!origin) {
+    // Older browsers and server-to-server calls send no Origin. Browsers that send Fetch
+    // Metadata still tell us when a request came from another site.
+    if (request.headers.get("sec-fetch-site") === "cross-site") throw new AppError("forbidden", "Cross-site request rejected.");
+    return;
+  }
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   let originHost: string;
   try {
@@ -162,6 +167,12 @@ export function assertSameOrigin(request: Request): void {
   if (!host || originHost !== host) throw new AppError("forbidden", "Cross-site request rejected.");
 }
 
-function clientIp(request: Request): string {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+/** Platform-set client IP first (Vercel sets x-real-ip; a client-sent X-Forwarded-For prefix can be spoofed elsewhere). */
+export function clientIp(request: Request): string {
+  return (
+    request.headers.get("x-real-ip")?.trim() ||
+    request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown"
+  );
 }

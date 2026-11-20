@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isE164, toE164 } from "./phone";
 
 export const PASSWORD_RULES = "At least 10 characters with upper- and lower-case letters and a number.";
 
@@ -36,6 +37,27 @@ export const otpVerifySchema = z.object({
     .string()
     .trim()
     .regex(/^\d{6,10}$/, { error: "Enter the code from your email" }),
+  next: z.string().max(500).optional(),
+});
+
+/** Mobile sign-in: a dial code plus the typed number, normalised to E.164. */
+export const phoneInputSchema = z
+  .object({ dial: z.string().trim().max(6).default("+91"), phone: z.string().trim().min(4, { error: "Enter your mobile number" }).max(24) })
+  .transform((v, ctx) => {
+    const e164 = toE164(v.dial, v.phone);
+    if (!e164) {
+      ctx.addIssue({ code: "custom", path: ["phone"], message: "Enter a valid mobile number for the selected country" });
+      return z.NEVER;
+    }
+    return e164;
+  });
+
+export const phoneOtpVerifySchema = z.object({
+  phone: z.string().refine(isE164, { error: "Enter a valid mobile number" }),
+  token: z
+    .string()
+    .trim()
+    .regex(/^\d{6,10}$/, { error: "Enter the code from the text message" }),
   next: z.string().max(500).optional(),
 });
 

@@ -3,7 +3,7 @@ import { ReviewActions } from "@/components/admin/review-actions";
 import { ServiceNotice } from "@/components/feedback/service-notice";
 import { MemberLink } from "@/components/social/member-card";
 import { Alert, Card, EmptyState } from "@/components/ui/primitives";
-import { formatDate } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
 import { VERIFICATION_LABELS, type VerificationKind } from "@backend/modules/auth/permissions";
 import { verificationQueue } from "@backend/modules/admin/service";
 import { requirePageSession } from "@backend/auth/viewer";
@@ -24,7 +24,11 @@ export default async function VerificationsQueue() {
         {items.map((v) => (
           <li key={v.id}>
             <Card className="space-y-4 p-6">
-              <MemberLink member={v.subject} subtitle={`${VERIFICATION_LABELS[v.kind as VerificationKind]} · ${formatDate(v.createdAt)}`} />
+              <MemberLink member={v.subject} subtitle={
+                <>
+                  {VERIFICATION_LABELS[v.kind as VerificationKind]} · <LocalTime iso={v.createdAt} format="date" />
+                </>
+              } />
               {v.statement ? <p className="text-sm whitespace-pre-line">{v.statement}</p> : null}
               <ul className="flex flex-wrap gap-2">
                 {v.documents.map((d, i) => (

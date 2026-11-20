@@ -1,5 +1,13 @@
 import type { ProfileSummary } from "@backend/modules/profiles/types";
 
+/** How long after sending a message its sender may unsend it (the database enforces this). */
+export const UNSEND_WINDOW_MS = 10 * 60_000;
+
+/** Whether a message can still be unsent at `now`. A UI hint only; the server decides. */
+export function canUnsend(message: { senderId: string; createdAt: string; unsentAt: string | null }, viewerId: string, now = Date.now()): boolean {
+  return message.senderId === viewerId && !message.unsentAt && now - Date.parse(message.createdAt) < UNSEND_WINDOW_MS;
+}
+
 export type ConversationSummary = {
   id: string;
   other: ProfileSummary;
@@ -23,6 +31,8 @@ export type MessageView = {
   body: string;
   clientId: string;
   createdAt: string;
+  /** Set when the sender unsent the message; the body and attachments are then empty. */
+  unsentAt: string | null;
   /** Files shared with the message. URLs are short-lived signed URLs, never public. */
   attachments: MessageAttachment[];
   /** Present on messages loaded through the API (absent on realtime payloads until reconciled). */
@@ -62,6 +72,7 @@ export type ConversationDetail = {
 export type RealtimeEvents = {
   "message.created": { id: string; conversation_id: string; sender_id: string; body: string; client_id: string; created_at: string };
   "message.updated": { id: string; client_id: string; conversation_id: string };
+  "message.unsent": { id: string; client_id: string; conversation_id: string };
   "conversation.read": { user_id: string; last_read_at: string };
   "reaction.changed": { message_id: string; user_id: string; emoji: string; op: "add" | "remove" };
   "notification.created": { id: string; type: string; created_at: string };

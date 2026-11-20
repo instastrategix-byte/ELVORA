@@ -4,6 +4,7 @@ import { WidgetSkeleton } from "@/components/dashboard/widgets";
 import { Skeleton } from "@/components/ui/primitives";
 import { requirePageSession } from "@backend/auth/viewer";
 import { FeedSection } from "./feed-section";
+import { FollowUpsSection } from "./follow-ups-section";
 import { IdentityCard } from "./identity";
 import { ProfileInsightsSection } from "./insights-section";
 import { EventsSection } from "./personal-sections";
@@ -38,6 +39,9 @@ export default async function HomePage() {
             <IdentityCard />
           </Suspense>
         </div>
+        <Suspense fallback={null}>
+          <FollowUpsSection />
+        </Suspense>
         <Suspense fallback={<WidgetSkeleton rows={1} />}>
           <ProfileInsightsSection />
         </Suspense>

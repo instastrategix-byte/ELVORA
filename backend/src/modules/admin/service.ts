@@ -5,9 +5,11 @@ import { toCampaignView, type CampaignView } from "@backend/modules/ads/service"
 import { getSummaries } from "@backend/modules/profiles/service";
 import type { ProfileSummary } from "@backend/modules/profiles/types";
 import { signedUrls } from "@backend/modules/storage/service";
+import { BUSINESS_PUBLIC_COLUMNS, businessPrivateDetails } from "@backend/modules/listings/service";
 import { unwrap } from "@backend/http/db-errors";
 import { AppError } from "@/lib/errors";
 import type { moderationSchema, planGrantSchema } from "./schemas";
+import { applicationTrust, type ApplicationTrust } from "@backend/modules/vouches/service";
 
 /*
  * All staff operations run as the signed-in staff member (not the service role). The SQL
@@ -39,7 +41,16 @@ export async function queueCounts(db: DbClient): Promise<QueueCounts> {
   return { applications, verifications, businesses, listings, campaigns, reports };
 }
 
-export type ApplicationQueueItem = { id: string; planId: string; status: string; statement: string | null; createdAt: string; applicant: ProfileSummary };
+export type ApplicationQueueItem = {
+  id: string;
+  planId: string;
+  status: string;
+  statement: string | null;
+  createdAt: string;
+  applicant: ProfileSummary;
+  /** Referees the applicant named and vouches they hold. Informational only — never changes approval rules. */
+  trust: ApplicationTrust | null;
+};
 
 export async function applicationQueue(db: DbClient): Promise<ApplicationQueueItem[]> {
   const rows = unwrap(
@@ -50,8 +61,23 @@ export async function applicationQueue(db: DbClient): Promise<ApplicationQueueIt
       .order("created_at")
       .limit(QUEUE_LIMIT),
   );
-  const people = await getSummaries(db, rows.map((r) => r.user_id));
-  return rows.map((r) => ({ id: r.id, planId: r.plan_id, status: r.status, statement: r.statement, createdAt: r.created_at, applicant: people.get(r.user_id)! }));
+  const [people, trust] = await Promise.all([
+    getSummaries(db, rows.map((r) => r.user_id)),
+    // Optional context for reviewers; the queue still loads if it fails.
+    applicationTrust(
+      db,
+      rows.map((r) => ({ id: r.id, applicantId: r.user_id })),
+    ).catch(() => null),
+  ]);
+  return rows.map((r) => ({
+    id: r.id,
+    planId: r.plan_id,
+    status: r.status,
+    statement: r.statement,
+    createdAt: r.created_at,
+    applicant: people.get(r.user_id)!,
+    trust: trust?.get(r.id) ?? null,
+  }));
 }
 
 export type VerificationQueueItem = {
@@ -82,20 +108,24 @@ export async function verificationQueue(db: DbClient): Promise<VerificationQueue
 
 export async function businessQueue(db: DbClient) {
   const rows = unwrap(
-    await db.from("businesses").select("*").eq("status", "pending_review").order("updated_at").limit(QUEUE_LIMIT),
+    await db.from("businesses").select(BUSINESS_PUBLIC_COLUMNS).eq("status", "pending_review").order("updated_at").limit(QUEUE_LIMIT),
   );
-  const owners = await getSummaries(db, rows.map((r) => r.owner_id));
-  const urls = await signedUrls(db, "verification-documents", rows.flatMap((r) => r.evidence_paths), 600);
+  const [owners, details] = await Promise.all([
+    getSummaries(db, rows.map((r) => r.owner_id)),
+    businessPrivateDetails(db, rows.map((r) => r.id)),
+  ]);
+  const evidence = (id: string) => details.get(id)?.evidence_paths ?? [];
+  const urls = await signedUrls(db, "verification-documents", rows.flatMap((r) => evidence(r.id)), 600);
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
     category: r.category,
     location: r.location,
     website: r.website,
-    registrationNumber: r.registration_number,
+    registrationNumber: details.get(r.id)?.registration_number ?? null,
     description: r.description,
     owner: owners.get(r.owner_id)!,
-    documents: r.evidence_paths.map((p) => ({ path: p, url: urls.get(p) ?? null })),
+    documents: evidence(r.id).map((p) => ({ path: p, url: urls.get(p) ?? null })),
   }));
 }
 

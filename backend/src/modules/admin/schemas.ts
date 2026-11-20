@@ -26,7 +26,7 @@ export const moderationSchema = z
   .object({
     action: z.enum(["hide_content", "remove_content", "restore_content", "warn", "suspend", "reinstate"]),
     reason: z.string().trim().min(3, { error: "A reason is required" }).max(2000),
-    targetType: z.enum(["post", "comment", "profile", "listing", "business", "message"]).optional(),
+    targetType: z.enum(["post", "comment", "profile", "listing", "business", "message", "reel"]).optional(),
     targetId: z.uuid().optional(),
     targetUserId: z.uuid().optional(),
     reportId: z.uuid().optional(),

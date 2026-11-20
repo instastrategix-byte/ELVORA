@@ -1,4 +1,5 @@
 import { Anchor, Building, Car, Gem, Hotel, PartyPopper, Plane, Sailboat, Trees } from "lucide-react";
+import Image from "next/image";
 import { CATEGORY_LABELS, type ListingCategory } from "@backend/modules/listings/schemas";
 import { cn } from "@/lib/utils";
 
@@ -25,12 +26,18 @@ export function CategoryArt({
   label,
   src,
   showName = false,
+  sizes = "(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw",
+  priority = false,
 }: {
   category: ListingCategory;
   className?: string;
   label?: string;
   src?: string | null;
   showName?: boolean;
+  /** Rendered width hint for responsive image sizes. */
+  sizes?: string;
+  /** Above-the-fold images load eagerly. */
+  priority?: boolean;
 }) {
   const { icon: Icon, tint } = ART[category];
   const a11y = { role: label ? "img" : undefined, "aria-label": label, "aria-hidden": label ? undefined : true } as const;
@@ -38,9 +45,8 @@ export function CategoryArt({
   if (src) {
     return (
       <div {...a11y} className={cn("relative overflow-hidden bg-surface-2", className)}>
-        {/* Site-owned photography from /public; plain img keeps arbitrary aspect ratios simple. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt="" className="absolute inset-0 size-full object-cover" loading="lazy" />
+        {/* Site-owned photography from /public, resized and served as modern formats by next/image. */}
+        <Image src={src} alt="" fill sizes={sizes} priority={priority} className="object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
       </div>
     );

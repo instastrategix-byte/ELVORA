@@ -14,12 +14,31 @@ export function toMinorUnits(amount: number, currency: string): number {
   return Math.round(amount * (ZERO_DECIMAL.has(currency) ? 1 : 100));
 }
 
-export function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" }).format(new Date(iso));
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * "20 Nov 2026". Calendar dates ("2026-11-20") are timezone-free and always shown as written —
+ * formatting them as local midnight UTC would show the previous day west of Greenwich.
+ * Timestamps use `timeZone` (default: the runtime's zone — use <LocalTime> in UI so the server
+ * and browser agree).
+ */
+export function formatDate(iso: string, timeZone?: string): string {
+  return new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric", timeZone: DATE_ONLY.test(iso) ? "UTC" : timeZone }).format(
+    new Date(DATE_ONLY.test(iso) ? `${iso}T00:00:00Z` : iso),
+  );
 }
 
-export function formatDateTime(iso: string): string {
-  return new Intl.DateTimeFormat("en", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+export function formatDateTime(iso: string, timeZone?: string): string {
+  return new Intl.DateTimeFormat("en", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone }).format(new Date(iso));
+}
+
+/** "YYYY-MM-DD" for the calendar date of `d` in the runtime's own time zone. */
+export function localDateIso(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function isDateOnly(value: string): boolean {
+  return DATE_ONLY.test(value);
 }
 
 const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [

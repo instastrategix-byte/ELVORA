@@ -23,6 +23,13 @@ const PAGE = 24;
 const LISTING_COLUMNS =
   "id, business_id, title, slug, category, summary, description, city, country, price_from_minor, currency, price_unit, amenities, visibility, status, cover_path, approved_at, review_note, published_at, created_at";
 
+/**
+ * Columns any viewer may read. Verification details (registration number, evidence, reviewer
+ * note) are column-restricted in the database and come only from business_private_details(),
+ * which returns them to the owner and moderators.
+ */
+export const BUSINESS_PUBLIC_COLUMNS = "id, owner_id, name, slug, category, location, status, logo_path, description, website, contact_email";
+
 type BusinessRow = {
   id: string;
   owner_id: string;
@@ -35,10 +42,26 @@ type BusinessRow = {
   description: string | null;
   website: string | null;
   contact_email: string | null;
-  registration_number: string | null;
-  review_note: string | null;
-  evidence_paths: string[];
+  registration_number?: string | null;
+  review_note?: string | null;
+  evidence_paths?: string[];
 };
+
+export type BusinessPrivate = { registration_number: string | null; evidence_paths: string[]; review_note: string | null };
+
+/** Verification details for the given businesses, for the owner or a moderator; others get nothing. */
+export async function businessPrivateDetails(db: DbClient, ids: string[]): Promise<Map<string, BusinessPrivate>> {
+  if (ids.length === 0) return new Map();
+  const rows = unwrap(await db.rpc("business_private_details", { p_ids: ids }));
+  return new Map(
+    rows.map((r) => [r.id, { registration_number: r.registration_number, evidence_paths: r.evidence_paths ?? [], review_note: r.review_note }]),
+  );
+}
+
+async function withPrivate(db: DbClient, row: BusinessRow): Promise<BusinessRow> {
+  const extra = (await businessPrivateDetails(db, [row.id])).get(row.id);
+  return extra ? { ...row, ...extra } : row;
+}
 
 function toBusinessSummary(b: BusinessRow): BusinessSummary {
   return {
@@ -59,10 +82,10 @@ function toBusinessDetail(b: BusinessRow): BusinessDetail {
     description: b.description,
     website: b.website,
     contactEmail: b.contact_email,
-    registrationNumber: b.registration_number,
+    registrationNumber: b.registration_number ?? null,
     status: b.status,
-    reviewNote: b.review_note,
-    evidencePaths: b.evidence_paths,
+    reviewNote: b.review_note ?? null,
+    evidencePaths: b.evidence_paths ?? [],
     logoPath: b.logo_path,
   };
 }
@@ -71,17 +94,20 @@ function toBusinessDetail(b: BusinessRow): BusinessDetail {
 // Businesses
 // ---------------------------------------------------------------------------
 export async function getOwnBusiness(db: DbClient, viewer: Viewer): Promise<BusinessDetail | null> {
-  const row = unwrap(await db.from("businesses").select("*").eq("owner_id", viewer.id).order("created_at").limit(1).maybeSingle());
-  return row ? toBusinessDetail(row) : null;
+  const row = unwrap(
+    await db.from("businesses").select(BUSINESS_PUBLIC_COLUMNS).eq("owner_id", viewer.id).order("created_at").limit(1).maybeSingle(),
+  );
+  return row ? toBusinessDetail(await withPrivate(db, row)) : null;
 }
 
+/** Public business page. Verification details are included only for the owner or a moderator. */
 export async function getBusinessBySlug(db: DbClient, slug: string): Promise<BusinessDetail | null> {
-  const row = unwrap(await db.from("businesses").select("*").eq("slug", slug).maybeSingle());
-  return row ? toBusinessDetail(row) : null;
+  const row = unwrap(await db.from("businesses").select(BUSINESS_PUBLIC_COLUMNS).eq("slug", slug).maybeSingle());
+  return row ? toBusinessDetail(await withPrivate(db, row)) : null;
 }
 
 export async function searchBusinesses(db: DbClient, q?: string): Promise<BusinessSummary[]> {
-  let query = db.from("businesses").select("*").eq("status", "approved").order("name").limit(PAGE);
+  let query = db.from("businesses").select(BUSINESS_PUBLIC_COLUMNS).eq("status", "approved").order("name").limit(PAGE);
   const term = q?.replace(/[%,()]/g, " ").trim();
   if (term) query = query.or(`name.ilike.%${term}%,location.ilike.%${term}%`);
   return unwrap(await query).map(toBusinessSummary);
@@ -102,18 +128,18 @@ export async function saveBusiness(db: DbClient, viewer: Viewer, input: z.infer<
     ...(input.evidencePaths ? { evidence_paths: input.evidencePaths } : {}),
   };
   if (existing) {
-    const row = unwrap(await db.from("businesses").update(fields).eq("id", existing.id).select("*").single());
-    return toBusinessDetail(row);
+    const row = unwrap(await db.from("businesses").update(fields).eq("id", existing.id).select(BUSINESS_PUBLIC_COLUMNS).single());
+    return toBusinessDetail(await withPrivate(db, row));
   }
   const slug = `${slugify(input.name) || "business"}-${crypto.randomUUID().slice(0, 6)}`;
   const { data, error } = await db
     .from("businesses")
     .insert({ ...fields, owner_id: viewer.id, slug, category: input.category })
-    .select("*")
+    .select(BUSINESS_PUBLIC_COLUMNS)
     .single();
   if (error?.code === "42501") throw new AppError("forbidden", "A Luxury Business membership is required to create a business profile.");
   throwIfError(error);
-  return toBusinessDetail(data!);
+  return toBusinessDetail(await withPrivate(db, data!));
 }
 
 export async function submitBusiness(db: DbClient, businessId: string) {
@@ -150,7 +176,7 @@ async function toCards(db: DbClient, viewer: Viewer | null, rows: ListingRow[]):
   if (rows.length === 0) return [];
   const businessIds = [...new Set(rows.map((r) => r.business_id))];
   const [businesses, saves] = await Promise.all([
-    db.from("businesses").select("*").in("id", businessIds),
+    db.from("businesses").select(BUSINESS_PUBLIC_COLUMNS).in("id", businessIds),
     viewer
       ? db.from("listing_saves").select("listing_id").eq("user_id", viewer.id).in("listing_id", rows.map((r) => r.id))
       : Promise.resolve({ data: [], error: null }),

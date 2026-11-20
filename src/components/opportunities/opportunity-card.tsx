@@ -2,9 +2,10 @@ import { Clock, Lock, MapPin, Wifi } from "lucide-react";
 import Link from "next/link";
 import { MemberLink } from "@/components/social/member-card";
 import { Badge } from "@/components/ui/primitives";
-import { formatDate, formatMoney, formatRelative, toMinorUnits } from "@/lib/format";
+import { formatMoney, formatRelative, toMinorUnits } from "@/lib/format";
 import { INTEREST_STATUS_LABELS, OPPORTUNITY_KIND_LABELS } from "@backend/modules/opportunities/schemas";
 import type { OpportunityCard as Card } from "@backend/modules/opportunities/types";
+import { LocalTime } from "@/components/ui/local-time";
 
 /** "$500K – $2M", "From $1M", "Up to $250K", or null. */
 export function formatAmountRange(o: Pick<Card, "amountMinMinor" | "amountMaxMinor" | "currency">): string | null {
@@ -61,7 +62,7 @@ export function OpportunityCard({ opportunity: o }: { opportunity: Card }) {
         ) : null}
         {o.status === "open" && !o.expired ? (
           <span className="inline-flex items-center gap-1">
-            <Clock className="size-3" aria-hidden="true" /> Until {formatDate(o.expiresAt)}
+            <Clock className="size-3" aria-hidden="true" /> Until <LocalTime iso={o.expiresAt} format="date" />
           </span>
         ) : null}
       </div>

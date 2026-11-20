@@ -1,7 +1,7 @@
 import { publicEnv } from "./env";
 
 export type PublicBucket = "profile-media" | "listing-media";
-export type PrivateBucket = "post-media" | "verification-documents";
+export type PrivateBucket = "post-media" | "verification-documents" | "reels";
 export type Bucket = PublicBucket | PrivateBucket;
 
 /** Public URL for objects in public buckets. Private buckets require signed URLs (server-side). */
@@ -20,6 +20,8 @@ export const UPLOAD_RULES = {
   post_video: { bucket: "post-media", maxBytes: 50 * 1024 * 1024, mime: ["video/mp4", "video/webm"] },
   story_image: { bucket: "post-media", maxBytes: 10 * 1024 * 1024, mime: ["image/jpeg", "image/png", "image/webp"] },
   story_video: { bucket: "post-media", maxBytes: 50 * 1024 * 1024, mime: ["video/mp4", "video/webm"] },
+  reel_video: { bucket: "reels", maxBytes: 100 * 1024 * 1024, mime: ["video/mp4", "video/webm"] },
+  reel_poster: { bucket: "reels", maxBytes: 2 * 1024 * 1024, mime: ["image/jpeg", "image/webp"] },
   listing_image: { bucket: "listing-media", maxBytes: 10 * 1024 * 1024, mime: ["image/jpeg", "image/png", "image/webp"] },
   business_logo: { bucket: "listing-media", maxBytes: 5 * 1024 * 1024, mime: ["image/jpeg", "image/png", "image/webp"] },
   verification_document: {

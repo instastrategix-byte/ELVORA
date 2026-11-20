@@ -107,6 +107,9 @@ export default function HomePage() {
                 category="villa"
                 src={SITE_MEDIA.hero.primary}
                 showName={!SITE_MEDIA.hero.primary}
+                // Desktop-only hero: preload it there; on phones the preload picks the tiniest variant.
+                priority
+                sizes="(min-width: 1024px) 25vw, 1px"
                 className="aspect-[3/4] rounded-[2rem] shadow-lift"
               />
               <div className="mt-16 space-y-5">
@@ -114,6 +117,7 @@ export default function HomePage() {
                   category="yacht"
                   src={SITE_MEDIA.hero.secondary}
                   showName={!SITE_MEDIA.hero.secondary}
+                  sizes="(min-width: 1024px) 25vw, 1px"
                   className="aspect-square rounded-[2rem] shadow-lift"
                 />
                 <div className="panel animate-float p-5 backdrop-blur">
@@ -204,6 +208,7 @@ export default function HomePage() {
                   <CategoryArt
                     category={c}
                     src={SITE_MEDIA.categories[c]}
+                    sizes={WIDE_TILES.has(i) || i === LISTING_CATEGORIES.length - 1 ? "(min-width: 768px) 50vw, 100vw" : "(min-width: 768px) 25vw, 50vw"}
                     className={cn("aspect-square transition-transform duration-700 group-hover:scale-[1.04]", WIDE_TILES.has(i) && "md:aspect-[2/1]")}
                   />
                   <span className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/80 to-transparent px-5 pt-10 pb-4">

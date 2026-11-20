@@ -31,7 +31,7 @@ export default function AdvertisePage() {
               <Link href="/apply?plan=advertiser">Apply as an advertiser</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link href="/ads">Advertiser dashboard</Link>
+              <Link href="/ads-manager">Advertiser dashboard</Link>
             </Button>
           </div>
         </div>

@@ -1,14 +1,12 @@
 import { isAppError } from "@/lib/errors";
 import { logger } from "@backend/core/logger";
 import { rateLimit } from "@backend/http/rate-limit";
+import { clientIp } from "@backend/http/route";
 import { pixelPayloadSchema, requestHost } from "@backend/modules/advertising/tracking/ingest";
 import { ingestConversion } from "@backend/modules/advertising/tracking/service";
 
 const MAX_BODY = 8 * 1024;
 
-function clientIp(request: Request): string {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
-}
 
 function cors(origin: string | null, allowed: boolean): HeadersInit {
   // Echo the origin only for events the integration accepted; never a wildcard.
@@ -25,6 +23,8 @@ export async function POST(request: Request) {
   if (!rateLimit(`ads-collect:${clientIp(request)}`, 120, 60_000).ok) {
     return new Response(null, { status: 429, headers: { ...cors(origin, false), "retry-after": "60" } });
   }
+  // Refuse oversized bodies before reading them into memory.
+  if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY) return new Response(null, { status: 413, headers: cors(origin, false) });
   const raw = await request.text();
   if (raw.length > MAX_BODY) return new Response(null, { status: 413, headers: cors(origin, false) });
   let json: unknown;

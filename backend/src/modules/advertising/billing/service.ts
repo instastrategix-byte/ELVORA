@@ -118,8 +118,8 @@ export async function startTopUp(db: DbClient, viewer: Viewer, input: z.infer<ty
       email: viewer.email,
       amountMinor: input.amountMinor,
       currency: overview.currency,
-      successUrl: siteUrl("/ads/billing?topup=success"),
-      cancelUrl: siteUrl("/ads/billing?topup=cancelled"),
+      successUrl: siteUrl(`/ads-manager/${input.accountId}/billing?topup=success`),
+      cancelUrl: siteUrl(`/ads-manager/${input.accountId}/billing?topup=cancelled`),
     });
     logger.info("ads.topup_checkout_started", { account: input.accountId, amount: input.amountMinor });
     return result;

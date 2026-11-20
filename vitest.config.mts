@@ -18,5 +18,7 @@ export default defineConfig({
     exclude: ["tests/e2e/**", "node_modules/**"],
     setupFiles: ["./tests/setup.ts"],
     testTimeout: 30_000,
+    // DB suites apply every migration to PGlite in beforeAll; that grows with each migration.
+    hookTimeout: 120_000,
   },
 });

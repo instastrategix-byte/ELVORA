@@ -1,7 +1,6 @@
 import "server-only";
 import { z } from "zod";
 import type { DbClient } from "@backend/db/server";
-import type { Viewer } from "@backend/modules/auth/permissions";
 import { unwrap } from "@backend/http/db-errors";
 import { getSummaries } from "@backend/modules/profiles/service";
 import type { ProfileSummary } from "@backend/modules/profiles/types";
@@ -27,19 +26,28 @@ export const respondIntroductionSchema = z.discriminatedUnion("as", [
   z.object({ as: z.literal("target"), accept: z.boolean() }),
 ]);
 
-export type IntroductionStatus = "pending" | "forwarded" | "accepted" | "declined" | "withdrawn";
+/**
+ * What the viewer may know about an introduction (see my_introductions() in
+ * 20261124000200). Requesters never learn who declined: any decline or expiry is "unavailable".
+ */
+export type IntroductionStatus = "pending" | "forwarded" | "accepted" | "declined" | "withdrawn" | "expired" | "unavailable";
 
 export type IntroductionView = {
   id: string;
   status: IntroductionStatus;
   message: string;
+  /** The introducer's note to the target. Never shown to the requester. */
   introducerNote: string | null;
-  declinedByIntroducer: boolean;
+  /** The 1:1 conversation opened on mutual acceptance (requester and target only). */
+  conversationId: string | null;
+  expiresAt: string;
   createdAt: string;
   updatedAt: string;
   requester: ProfileSummary;
   introducer: ProfileSummary;
   target: ProfileSummary;
+  /** Vouches for the requester that the viewer can see, to help introducer and target decide. */
+  requesterVouches: number;
   /** The viewer's role in this request. */
   role: "requester" | "introducer" | "target";
 };
@@ -53,27 +61,52 @@ export type IntroductionInbox = {
   sent: IntroductionView[];
 };
 
-export async function listIntroductions(db: DbClient, viewer: Viewer): Promise<IntroductionInbox> {
-  const rows = unwrap(
-    await db
-      .from("introduction_requests")
-      .select("id, requester_id, introducer_id, target_id, message, introducer_note, status, declined_by, created_at, updated_at")
-      .order("updated_at", { ascending: false })
-      .limit(100),
-  );
-  const people = await getSummaries(db, rows.flatMap((r) => [r.requester_id, r.introducer_id, r.target_id]));
+type MyIntroductionRow = {
+  id: string;
+  role: IntroductionView["role"];
+  status: IntroductionStatus;
+  requester_id: string;
+  introducer_id: string;
+  target_id: string;
+  message: string;
+  introducer_note: string | null;
+  conversation_id: string | null;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
+async function myIntroductions(db: DbClient): Promise<MyIntroductionRow[]> {
+  return unwrap(await db.rpc("my_introductions")) as MyIntroductionRow[];
+}
+
+export async function listIntroductions(db: DbClient): Promise<IntroductionInbox> {
+  const rows = await myIntroductions(db);
+  const requesterIds = [...new Set(rows.filter((r) => r.role !== "requester").map((r) => r.requester_id))];
+  const [people, vouchRows] = await Promise.all([
+    getSummaries(db, rows.flatMap((r) => [r.requester_id, r.introducer_id, r.target_id])),
+    requesterIds.length
+      ? db.from("vouches").select("vouchee_id").in("vouchee_id", requesterIds).is("withdrawn_at", null)
+      : Promise.resolve({ data: [] as { vouchee_id: string }[], error: null }),
+  ]);
+  // RLS returns only the vouches this viewer may see, so the count never leaks hidden ones.
+  const vouchCounts = new Map<string, number>();
+  for (const v of unwrap(vouchRows)) vouchCounts.set(v.vouchee_id, (vouchCounts.get(v.vouchee_id) ?? 0) + 1);
+
   const views: IntroductionView[] = rows.map((r) => ({
     id: r.id,
     status: r.status,
     message: r.message,
     introducerNote: r.introducer_note,
-    declinedByIntroducer: r.declined_by !== null && r.declined_by === r.introducer_id,
+    conversationId: r.conversation_id,
+    expiresAt: r.expires_at,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     requester: people.get(r.requester_id)!,
     introducer: people.get(r.introducer_id)!,
     target: people.get(r.target_id)!,
-    role: r.requester_id === viewer.id ? "requester" : r.introducer_id === viewer.id ? "introducer" : "target",
+    requesterVouches: vouchCounts.get(r.requester_id) ?? 0,
+    role: r.role,
   }));
   return {
     toReview: views.filter((v) => v.role === "introducer"),
@@ -82,12 +115,10 @@ export async function listIntroductions(db: DbClient, viewer: Viewer): Promise<I
   };
 }
 
-export async function countIntroductionsAwaiting(db: DbClient, viewer: Viewer): Promise<number> {
-  const [asIntroducer, asTarget] = await Promise.all([
-    db.from("introduction_requests").select("id", { count: "exact", head: true }).eq("introducer_id", viewer.id).eq("status", "pending"),
-    db.from("introduction_requests").select("id", { count: "exact", head: true }).eq("target_id", viewer.id).eq("status", "forwarded"),
-  ]);
-  return (asIntroducer.count ?? 0) + (asTarget.count ?? 0);
+/** Requests waiting on the viewer: to forward (as introducer) or to answer (as target). */
+export async function countIntroductionsAwaiting(db: DbClient): Promise<number> {
+  const rows = await myIntroductions(db);
+  return rows.filter((r) => (r.role === "introducer" && r.status === "pending") || (r.role === "target" && r.status === "forwarded")).length;
 }
 
 /** Mutual connections who could introduce the viewer to `targetId` (only the viewer's own connections). */

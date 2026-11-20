@@ -17,6 +17,7 @@ import {
 } from "@backend/modules/auth/actions";
 import { PASSWORD_RULES } from "@backend/modules/auth/schemas";
 import { GoogleButton } from "./google-button";
+import { ResendButton } from "./resend-countdown";
 
 const initial: AuthFormState = { status: "idle" };
 
@@ -84,7 +85,10 @@ function PasswordSignIn({ next }: { next?: string }) {
 function CodeSignIn({ next }: { next?: string }) {
   const [requested, request, requesting] = useActionState(requestOtpAction, initial);
   const [verified, verify, verifying] = useActionState(verifyOtpAction, initial);
-  const sentTo = requested.status === "success" ? requested.values?.email : undefined;
+  // Stays on the code step once a code was sent, even if a later resend is refused for waiting.
+  const [sentTo, setSentTo] = useState<string | undefined>();
+  const successEmail = requested.status === "success" ? requested.values?.email : undefined;
+  if (successEmail && successEmail !== sentTo) setSentTo(successEmail);
 
   if (!sentTo) {
     return (
@@ -103,7 +107,7 @@ function CodeSignIn({ next }: { next?: string }) {
 
   return (
     <div role="tabpanel" className="space-y-4">
-      <Alert tone="success">{requested.message}</Alert>
+      <FormAlert state={requested} />
       <form action={verify} className="space-y-4" noValidate>
         <input type="hidden" name="email" value={sentTo} />
         <input type="hidden" name="next" value={next ?? ""} />
@@ -129,9 +133,15 @@ function CodeSignIn({ next }: { next?: string }) {
       <form action={request} className="text-center">
         <input type="hidden" name="email" value={sentTo} />
         <input type="hidden" name="next" value={next ?? ""} />
-        <button type="submit" disabled={requesting} className="text-sm text-accent hover:underline disabled:opacity-50">
-          {requesting ? "Sending…" : "Send a new code"}
-        </button>
+        <ResendButton
+          variant="ghost"
+          size="sm"
+          className="w-full"
+          retryAt={requested.retryAt}
+          sent={requested.sent}
+          pending={requesting}
+          label="Send a new code"
+        />
       </form>
     </div>
   );
@@ -195,11 +205,16 @@ export function ForgotPasswordForm() {
     <form action={action} className="space-y-4" noValidate>
       <FormAlert state={state} />
       <Field id="email" label="Email" error={state.fieldErrors?.email}>
-        {(aria) => <Input name="email" type="email" autoComplete="email" required {...aria} />}
+        {(aria) => <Input name="email" type="email" autoComplete="email" required defaultValue={state.values?.email} {...aria} />}
       </Field>
-      <Button type="submit" size="lg" className="w-full" disabled={pending}>
-        {pending ? "Sending…" : "Send reset link"}
-      </Button>
+      <ResendButton
+        size="lg"
+        className="w-full"
+        retryAt={state.retryAt}
+        sent={state.sent}
+        pending={pending}
+        label={state.retryAt ? "Send another link" : "Send reset link"}
+      />
     </form>
   );
 }
@@ -240,17 +255,16 @@ export function ResetPasswordForm({ mode = "reset" }: { mode?: "reset" | "change
   );
 }
 
-export function ResendVerificationForm({ email }: { email?: string }) {
-  const [state, action, pending] = useActionState(resendVerificationAction, initial);
+/** `retryAt` (epoch ms) carries the wait left from the sign-up email so the countdown starts at once. */
+export function ResendVerificationForm({ email, retryAt }: { email?: string; retryAt?: number }) {
+  const [state, action, pending] = useActionState(resendVerificationAction, { status: "idle", retryAt } as AuthFormState);
   return (
     <form action={action} className="space-y-3" noValidate>
       <FormAlert state={state} />
       <Field id="email" label="Email" error={state.fieldErrors?.email}>
-        {(aria) => <Input name="email" type="email" required defaultValue={email} {...aria} />}
+        {(aria) => <Input name="email" type="email" required defaultValue={state.values?.email ?? email} {...aria} />}
       </Field>
-      <Button type="submit" variant="outline" className="w-full" disabled={pending}>
-        {pending ? "Sending…" : "Resend verification email"}
-      </Button>
+      <ResendButton variant="outline" className="w-full" retryAt={state.retryAt} sent={state.sent} pending={pending} label="Resend verification email" />
     </form>
   );
 }

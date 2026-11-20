@@ -6,10 +6,14 @@ import {
   Briefcase,
   Building2,
   CalendarDays,
+  Clapperboard,
   Compass,
+  Contact,
   CreditCard,
+  FileLock2,
   Gem,
   Handshake,
+  HeartHandshake,
   LayoutDashboard,
   LifeBuoy,
   Megaphone,
@@ -37,9 +41,13 @@ type NavItem = { href: string; label: string; icon: LucideIcon };
 const MAIN: NavItem[] = [
   { href: "/home", label: "Home", icon: LayoutDashboard },
   { href: "/feed", label: "Feed", icon: Newspaper },
+  { href: "/reels", label: "Reels", icon: Clapperboard },
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/connections", label: "Network", icon: Users },
   { href: "/introductions", label: "Introductions", icon: Handshake },
+  { href: "/vouches", label: "Vouches", icon: HeartHandshake },
+  { href: "/contacts", label: "Contacts", icon: Contact },
+  { href: "/deal-rooms", label: "Deal rooms", icon: FileLock2 },
   { href: "/messages", label: "Messages", icon: MessageSquare },
   { href: "/notifications", label: "Notifications", icon: Bell },
 ];
@@ -66,7 +74,7 @@ export type Workspaces = { business?: boolean; ads?: boolean; admin?: boolean };
 function workspaceItems(w: Workspaces): NavItem[] {
   const items: NavItem[] = [];
   if (w.business) items.push({ href: "/business", label: "Business", icon: Building2 });
-  if (w.ads) items.push({ href: "/ads", label: "Advertising", icon: Megaphone });
+  if (w.ads) items.push({ href: "/ads-manager", label: "Ads Manager", icon: Megaphone });
   if (w.admin) items.push({ href: "/admin", label: "Administration", icon: ShieldCheck });
   return items;
 }

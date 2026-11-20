@@ -3,9 +3,10 @@ import { ReviewActions } from "@/components/admin/review-actions";
 import { ServiceNotice } from "@/components/feedback/service-notice";
 import { MemberLink } from "@/components/social/member-card";
 import { Badge, Card, EmptyState } from "@/components/ui/primitives";
-import { formatDate, titleCase } from "@/lib/format";
+import { titleCase } from "@/lib/format";
 import { reportQueue } from "@backend/modules/admin/service";
 import { requirePageSession } from "@backend/auth/viewer";
+import { LocalTime } from "@/components/ui/local-time";
 
 export default async function ReportsQueue() {
   const { db } = await requirePageSession({ staff: "moderator", next: "/admin/reports" });
@@ -19,7 +20,7 @@ export default async function ReportsQueue() {
   return (
     <ul className="space-y-4">
       {items.map((r) => {
-        const contentTarget = r.targetType === "post" || r.targetType === "comment" || r.targetType === "listing";
+        const contentTarget = r.targetType === "post" || r.targetType === "comment" || r.targetType === "listing" || r.targetType === "reel";
         const authorId = r.targetType === "profile" ? r.targetId : (r.post?.author_id ?? null);
         return (
           <li key={r.id}>
@@ -27,7 +28,7 @@ export default async function ReportsQueue() {
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone="danger">{titleCase(r.reason)}</Badge>
                 <Badge>{titleCase(r.targetType)}</Badge>
-                <span className="text-xs text-muted">Reported {formatDate(r.createdAt)} by</span>
+                <span className="text-xs text-muted">Reported <LocalTime iso={r.createdAt} format="date" /> by</span>
                 <MemberLink member={r.reporter} size={24} />
               </div>
               {r.details ? <p className="text-sm whitespace-pre-line">{r.details}</p> : null}
@@ -38,6 +39,11 @@ export default async function ReportsQueue() {
                     Open post
                   </Link>
                 </blockquote>
+              ) : null}
+              {r.targetType === "reel" ? (
+                <Link href={`/reels/${r.targetId}`} className="block text-xs text-accent hover:underline">
+                  Open reel
+                </Link>
               ) : null}
               <ReviewActions
                 endpoint="/api/v1/admin/moderation"

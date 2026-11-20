@@ -4,10 +4,10 @@ import { ServiceNotice } from "@/components/feedback/service-notice";
 import { MemberLink } from "@/components/social/member-card";
 import { Badge, Card, EmptyState } from "@/components/ui/primitives";
 import { attempt } from "@/lib/attempt";
-import { formatDate } from "@/lib/format";
 import { listPlanGrants } from "@backend/modules/admin/service";
 import { listPlans } from "@backend/modules/membership/service";
 import { requirePageSession } from "@backend/auth/viewer";
+import { LocalTime } from "@/components/ui/local-time";
 
 export default async function PlanGrantsPage() {
   const { db } = await requirePageSession({ staff: "admin", next: "/admin/grants" });
@@ -46,9 +46,17 @@ export default async function PlanGrantsPage() {
                     <div className="space-y-2">
                       <MemberLink member={g.member} subtitle={`${planName.get(g.planId) ?? g.planId} · ${g.reason}`} />
                       <p className="text-xs text-muted">
-                        Granted {formatDate(g.createdAt)}
+                        Granted <LocalTime iso={g.createdAt} format="date" />
                         {g.grantedBy ? ` by @${g.grantedBy.handle}` : ""} ·{" "}
-                        {g.revokedAt ? `revoked ${formatDate(g.revokedAt)}` : `${active ? "ends" : "ended"} ${formatDate(g.expiresAt)}`}
+                        {g.revokedAt ? (
+                          <>
+                            revoked <LocalTime iso={g.revokedAt} format="date" />
+                          </>
+                        ) : (
+                          <>
+                            {active ? "ends" : "ended"} <LocalTime iso={g.expiresAt} format="date" />
+                          </>
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">

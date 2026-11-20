@@ -12,6 +12,7 @@ const MAX_BODY = 512 * 1024;
 export async function POST(request: Request, context: { params: Promise<{ provider: string }> }) {
   const { provider } = await context.params;
   if (provider !== "stripe" && provider !== "razorpay") return jsonError(new AppError("not_found", "Unknown provider."));
+  if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY) return jsonError(new AppError("payload_too_large", "Payload too large."));
   const raw = await request.text();
   if (raw.length > MAX_BODY) return jsonError(new AppError("payload_too_large", "Payload too large."));
   try {

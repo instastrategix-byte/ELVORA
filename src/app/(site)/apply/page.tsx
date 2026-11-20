@@ -8,9 +8,9 @@ import { InvitationCheck } from "@/components/membership/invitation-check";
 import { StatusBadge } from "@/components/membership/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, Skeleton } from "@/components/ui/primitives";
-import { formatDate } from "@/lib/format";
 import { getMembershipOverview } from "@backend/modules/membership/service";
 import { getSession } from "@backend/auth/viewer";
+import { LocalTime } from "@/components/ui/local-time";
 
 export const metadata: Metadata = {
   title: "Apply",
@@ -130,7 +130,7 @@ async function ApplyPanel({ searchParams }: { searchParams: SearchParams }) {
               <li key={a.id} className="flex items-center justify-between gap-3 py-3 text-sm">
                 <span>
                   {overview.plans.find((p) => p.id === a.planId)?.name ?? a.planId}
-                  <span className="block text-xs text-muted">Submitted {formatDate(a.createdAt)}</span>
+                  <span className="block text-xs text-muted">Submitted <LocalTime iso={a.createdAt} format="date" /></span>
                 </span>
                 <StatusBadge status={a.status} />
               </li>

@@ -7,11 +7,14 @@ import { PlanCard } from "@/components/membership/plan-card";
 import { StatusBadge } from "@/components/membership/status-badge";
 import { Button } from "@/components/ui/button";
 import { Alert, Card } from "@/components/ui/primitives";
-import { formatDate, formatMoney } from "@/lib/format";
+import { RefereeForm } from "@/components/vouches/vouch-ui";
+import { formatMoney } from "@/lib/format";
 import { configuredProviders } from "@backend/modules/billing/service";
 import { getMembershipOverview } from "@backend/modules/membership/service";
+import { myApplicationReferees } from "@backend/modules/vouches/service";
 import type { MembershipOverview, Plan } from "@backend/modules/membership/types";
 import { requirePageSession } from "@backend/auth/viewer";
+import { LocalTime } from "@/components/ui/local-time";
 
 export const metadata: Metadata = { title: "Membership & billing" };
 
@@ -19,8 +22,13 @@ export default async function MembershipAccountPage({ searchParams }: { searchPa
   const { viewer, db } = await requirePageSession({ next: "/account/membership" });
   const sp = await searchParams;
   let o: MembershipOverview;
+  let referees: Awaited<ReturnType<typeof myApplicationReferees>> | null = null;
   try {
-    o = await getMembershipOverview(db, viewer);
+    [o, referees] = await Promise.all([
+      getMembershipOverview(db, viewer),
+      // Optional: the page still works if referees can't be loaded.
+      myApplicationReferees(db).catch(() => null),
+    ]);
   } catch (error) {
     return <ServiceNotice error={error} what="your membership" />;
   }
@@ -61,7 +69,7 @@ export default async function MembershipAccountPage({ searchParams }: { searchPa
               <div key={g.id} className="flex items-center justify-between gap-4 p-5">
                 <div>
                   <p className="font-medium">{planName(g.planId)}</p>
-                  <p className="text-sm text-muted">Complimentary access · ends {formatDate(g.expiresAt)} · no payment involved</p>
+                  <p className="text-sm text-muted">Complimentary access · ends <LocalTime iso={g.expiresAt} format="date" /> · no payment involved</p>
                 </div>
                 <StatusBadge status="active" label="Complimentary" />
               </div>
@@ -76,9 +84,9 @@ export default async function MembershipAccountPage({ searchParams }: { searchPa
                     : s.status === "incomplete"
                       ? "Awaiting payment confirmation."
                       : s.cancelAtPeriodEnd
-                        ? `Ends ${s.currentPeriodEnd ? formatDate(s.currentPeriodEnd) : "at period end"}`
+                        ? <>Ends {s.currentPeriodEnd ? <LocalTime iso={s.currentPeriodEnd} format="date" /> : "at period end"}</>
                         : s.currentPeriodEnd
-                          ? `Renews ${formatDate(s.currentPeriodEnd)}`
+                          ? <>Renews <LocalTime iso={s.currentPeriodEnd} format="date" /></>
                           : "Active"}{" "}
                   · via {s.provider === "stripe" ? "Stripe" : "Razorpay"}
                 </p>
@@ -113,12 +121,12 @@ export default async function MembershipAccountPage({ searchParams }: { searchPa
           </h2>
           <Card className="divide-y divide-border">
             {o.applications.map((a) => (
-              <div key={a.id} className="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div key={a.id} className="flex flex-col gap-2 p-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div>
                   <p className="font-medium">{planName(a.planId)}</p>
                   <p className="text-sm text-muted">
-                    Submitted {formatDate(a.createdAt)}
-                    {a.decidedAt ? ` · Decided ${formatDate(a.decidedAt)}` : ""}
+                    Submitted <LocalTime iso={a.createdAt} format="date" />
+                    {a.decidedAt ? <> · Decided <LocalTime iso={a.decidedAt} format="date" /></> : null}
                   </p>
                   {a.reviewerNotes ? <p className="mt-1 text-sm text-muted">Note from our team: {a.reviewerNotes}</p> : null}
                 </div>
@@ -126,6 +134,11 @@ export default async function MembershipAccountPage({ searchParams }: { searchPa
                   <StatusBadge status={a.status} />
                   {["submitted", "under_review"].includes(a.status) ? <WithdrawApplicationButton applicationId={a.id} /> : null}
                 </div>
+                {referees && ["submitted", "under_review"].includes(a.status) ? (
+                  <div className="w-full sm:basis-full">
+                    <RefereeForm applicationId={a.id} referees={referees.get(a.id) ?? []} />
+                  </div>
+                ) : null}
               </div>
             ))}
           </Card>
@@ -152,7 +165,7 @@ export default async function MembershipAccountPage({ searchParams }: { searchPa
               <tbody className="divide-y divide-border">
                 {o.payments.map((p) => (
                   <tr key={p.id}>
-                    <td className="p-4 whitespace-nowrap">{formatDate(p.createdAt)}</td>
+                    <td className="p-4 whitespace-nowrap"><LocalTime iso={p.createdAt} format="date" /></td>
                     <td className="p-4">{p.description ?? "Membership"}</td>
                     <td className="p-4 whitespace-nowrap">
                       {formatMoney(p.amountMinor, p.currency)}

@@ -3,6 +3,7 @@ import type { z } from "zod";
 import { AppError } from "@/lib/errors";
 import type { DbClient } from "@backend/db/server";
 import type { Viewer } from "@backend/modules/auth/permissions";
+import { logger } from "@backend/core/logger";
 import { getSummaries } from "@backend/modules/profiles/service";
 import { throwIfError, unwrap } from "@backend/http/db-errors";
 import { ATTACHMENT_BUCKET, ATTACHMENT_TYPES, checkAttachment, sanitizeFileName, type uploadUrlSchema } from "./attachments";
@@ -19,11 +20,15 @@ export async function listConversations(db: DbClient, viewer: Viewer, before?: s
     other: others.get(r.other_user_id!)!,
     lastMessageAt: r.last_message_at,
     // Text-only messages always have a body, so an empty body means an attachment-only message.
-    lastMessagePreview: r.last_message_body
-      ? r.last_message_body.slice(0, PREVIEW_LENGTH)
-      : r.last_message_at
-        ? "Sent an attachment"
-        : null,
+    lastMessagePreview: r.last_message_unsent
+      ? r.last_message_sender === viewer.id
+        ? "You unsent a message"
+        : "Message unsent"
+      : r.last_message_body
+        ? r.last_message_body.slice(0, PREVIEW_LENGTH)
+        : r.last_message_at
+          ? "Sent an attachment"
+          : null,
     lastMessageFromViewer: r.last_message_sender === viewer.id,
     unreadCount: Number(r.unread_count ?? 0),
   }));
@@ -60,9 +65,17 @@ export async function getConversation(db: DbClient, viewer: Viewer, conversation
   };
 }
 
-type MessageRow = { id: string; conversation_id: string; sender_id: string; body: string; client_id: string; created_at: string };
+type MessageRow = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  body: string;
+  client_id: string;
+  created_at: string;
+  unsent_at: string | null;
+};
 
-const MESSAGE_COLUMNS = "id, conversation_id, sender_id, body, client_id, created_at";
+const MESSAGE_COLUMNS = "id, conversation_id, sender_id, body, client_id, created_at, unsent_at";
 
 function toView(r: MessageRow, attachments: MessageAttachment[] = []): MessageView {
   return {
@@ -72,7 +85,8 @@ function toView(r: MessageRow, attachments: MessageAttachment[] = []): MessageVi
     body: r.body,
     clientId: r.client_id,
     createdAt: r.created_at,
-    attachments,
+    unsentAt: r.unsent_at,
+    attachments: r.unsent_at ? [] : attachments,
   };
 }
 
@@ -122,6 +136,22 @@ export async function getMessage(db: DbClient, messageId: string): Promise<Messa
   const row = unwrap(await db.from("messages").select(MESSAGE_COLUMNS).eq("id", messageId).maybeSingle());
   if (!row) return null;
   return (await hydrate(db, [row]))[0] ?? null;
+}
+
+/**
+ * Unsends one of the viewer's own messages (within the window, checked by the database) and
+ * deletes its attachment files. Idempotent. Returns the tombstone.
+ */
+export async function unsendMessage(db: DbClient, messageId: string): Promise<MessageView> {
+  const paths = (unwrap(await db.rpc("unsend_message", { p_message: messageId })) ?? []) as string[];
+  if (paths.length) {
+    // The rows are gone, so storage RLS now lets the uploader remove their own files.
+    const { error } = await db.storage.from(ATTACHMENT_BUCKET).remove(paths);
+    if (error) logger.warn("messages.unsend.storage_cleanup_failed", { messageId, count: paths.length });
+  }
+  const saved = await getMessage(db, messageId);
+  if (!saved) throw new AppError("not_found", "Message not found.");
+  return saved;
 }
 
 /**
@@ -233,7 +263,7 @@ export async function sendMessage(
   if (error) {
     throwIfError(error, "Your message could not be sent.");
   }
-  return toView(data!, []);
+  return toView(data! as MessageRow, []);
 }
 
 export async function markConversationRead(db: DbClient, viewer: Viewer, conversationId: string) {

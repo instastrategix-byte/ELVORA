@@ -9,10 +9,11 @@ import { formatAmountRange, OpportunityStatusBadge } from "@/components/opportun
 import { MemberLink } from "@/components/social/member-card";
 import { Badge } from "@/components/ui/primitives";
 import { attempt } from "@/lib/attempt";
-import { formatDate, formatRelative } from "@/lib/format";
+import { formatRelative } from "@/lib/format";
 import { OPPORTUNITY_KIND_LABELS } from "@backend/modules/opportunities/schemas";
 import { getOpportunity, listInterests } from "@backend/modules/opportunities/service";
 import { requirePageSession } from "@backend/auth/viewer";
+import { LocalTime } from "@/components/ui/local-time";
 
 export const metadata: Metadata = { title: "Opportunity", robots: { index: false } };
 
@@ -73,7 +74,7 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
           <div>
             <dt className="text-xs text-muted">{live ? "Open until" : "Closes"}</dt>
             <dd className="mt-1 flex items-center gap-1">
-              <Clock className="size-3.5 text-muted" aria-hidden="true" /> {formatDate(o.expiresAt)}
+              <Clock className="size-3.5 text-muted" aria-hidden="true" /> <LocalTime iso={o.expiresAt} format="date" />
             </dd>
           </div>
         </dl>

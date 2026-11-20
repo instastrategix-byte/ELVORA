@@ -9,8 +9,9 @@ import { Field, Input } from "@/components/ui/form";
 import { Alert, Badge, EmptyState } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api-client";
-import { formatDate, formatRelative } from "@/lib/format";
+import { formatRelative } from "@/lib/format";
 import type { ReferralOverview, ReferralStatus } from "@backend/modules/referrals/service";
+import { LocalTime } from "@/components/ui/local-time";
 
 const STATUS: Record<ReferralStatus, { label: string; tone: "neutral" | "accent" | "success" | "warning" | "danger" }> = {
   pending: { label: "Waiting", tone: "accent" },
@@ -109,7 +110,7 @@ export function ReferralManager({ overview, siteOrigin }: { overview: ReferralOv
           <div>
             <p className="font-medium">Your invitation is ready</p>
             <p className="text-sm text-muted">
-              Copy it now — for security we only show it once. It works once and expires on {formatDate(created.expiresAt)}.
+              Copy it now — for security we only show it once. It works once and expires on <LocalTime iso={created.expiresAt} format="date" />.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -173,7 +174,7 @@ export function ReferralManager({ overview, siteOrigin }: { overview: ReferralOv
                       <p className="truncate text-sm font-medium">{i.email ?? "Open invitation"}</p>
                       <p className="text-xs text-muted">
                         Created {formatRelative(i.createdAt)}
-                        {i.status === "pending" && i.expiresAt ? ` · expires ${formatDate(i.expiresAt)}` : ""}
+                        {i.status === "pending" && i.expiresAt ? <> · expires <LocalTime iso={i.expiresAt} format="date" /></> : null}
                         {i.status === "joined" && i.redeemedAt ? ` · applied ${formatRelative(i.redeemedAt)}` : ""}
                       </p>
                     </>

@@ -1,5 +1,6 @@
 import "server-only";
 import { AppError } from "@/lib/errors";
+import { isSafeDestination } from "@/lib/safe-url";
 import { createAdminClient } from "@backend/db/admin";
 import type { DbClient } from "@backend/db/server";
 import { logger } from "@backend/core/logger";
@@ -54,7 +55,11 @@ export async function serveSponsored(db: DbClient, placement: AdPlacement | "lux
 export async function recordSponsoredClick(db: DbClient, impressionId: string): Promise<{ url: string }> {
   const [row] = unwrap(await db.rpc("record_ad_click_v2", { p_impression: impressionId }));
   if (!row) throw new AppError("not_found", "This ad is no longer available.");
-  if (row.destination_url) return { url: row.destination_url };
+  // Defence in depth: only ever hand the browser an https URL (never javascript:, data: etc.).
+  if (row.destination_url) {
+    if (isSafeDestination(row.destination_url)) return { url: row.destination_url };
+    throw new AppError("not_found", "This ad has no valid destination.");
+  }
   if (row.listing_id) {
     const listing = unwrap(await db.from("listings").select("slug").eq("id", row.listing_id).maybeSingle());
     if (listing) return { url: `/luxury/${listing.slug}` };

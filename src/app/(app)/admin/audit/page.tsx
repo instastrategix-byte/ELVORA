@@ -1,8 +1,8 @@
 import { ServiceNotice } from "@/components/feedback/service-notice";
 import { Card, EmptyState } from "@/components/ui/primitives";
-import { formatDateTime } from "@/lib/format";
 import { auditLog } from "@backend/modules/admin/service";
 import { requirePageSession } from "@backend/auth/viewer";
+import { LocalTime } from "@/components/ui/local-time";
 
 export default async function AuditPage() {
   const { db } = await requirePageSession({ staff: "moderator", next: "/admin/audit" });
@@ -28,7 +28,7 @@ export default async function AuditPage() {
         <tbody className="divide-y divide-border">
           {rows.map((r) => (
             <tr key={r.id}>
-              <td className="p-4 whitespace-nowrap">{formatDateTime(r.createdAt)}</td>
+              <td className="p-4 whitespace-nowrap"><LocalTime iso={r.createdAt} /></td>
               <td className="p-4">{r.actor?.displayName ?? "System"}</td>
               <td className="p-4 font-mono text-xs">{r.action}</td>
               <td className="p-4 font-mono text-xs text-muted">

@@ -6,7 +6,7 @@ import { MemberLink } from "@/components/social/member-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/primitives";
 import { attempt } from "@/lib/attempt";
-import { formatDate, titleCase } from "@/lib/format";
+import { titleCase } from "@/lib/format";
 import { queueCounts } from "@backend/modules/admin/service";
 import { listCampaigns } from "@backend/modules/ads/service";
 import { hasFeature, isStaff, VERIFICATION_LABELS } from "@backend/modules/auth/permissions";
@@ -15,6 +15,7 @@ import { listTrendingTags } from "@backend/modules/feed/service";
 import { browseListings, listOwnListings, listReceivedInquiries } from "@backend/modules/listings/service";
 import { getMembershipOverview } from "@backend/modules/membership/service";
 import { requirePageSession } from "@backend/auth/viewer";
+import { LocalTime } from "@/components/ui/local-time";
 
 const session = () => requirePageSession({ next: "/home" });
 
@@ -73,9 +74,9 @@ export async function MembershipSection() {
               {sub.status === "past_due"
                 ? "Payment overdue — update your billing details to keep access."
                 : sub.cancelAtPeriodEnd && sub.currentPeriodEnd
-                  ? `Ends ${formatDate(sub.currentPeriodEnd)}`
+                  ? <>Ends <LocalTime iso={sub.currentPeriodEnd} format="date" /></>
                   : sub.currentPeriodEnd
-                    ? `Renews ${formatDate(sub.currentPeriodEnd)}`
+                    ? <>Renews <LocalTime iso={sub.currentPeriodEnd} format="date" /></>
                     : sub.status === "trialing"
                       ? "Trial"
                       : "Active"}
@@ -84,7 +85,7 @@ export async function MembershipSection() {
         ) : grant ? (
           <div>
             <p className="display text-2xl">{planName(grant.planId)}</p>
-            <p className="mt-1 text-xs text-muted">Complimentary access until {formatDate(grant.expiresAt)}</p>
+            <p className="mt-1 text-xs text-muted">Complimentary access until <LocalTime iso={grant.expiresAt} format="date" /></p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -197,7 +198,7 @@ export async function WorkspacesSection() {
         </Widget>
       ) : null}
       {showAds ? (
-        <Widget title="Advertising" href="/ads" hrefLabel="Open workspace">
+        <Widget title="Advertising" href="/ads-manager" hrefLabel="Open workspace">
           <WorkspaceIcon icon={Megaphone} />
           {campaigns?.ok ? (
             <dl className="grid grid-cols-3 gap-2 text-center">

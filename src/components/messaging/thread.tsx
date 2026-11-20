@@ -1,17 +1,22 @@
 "use client";
 
-import { AlertCircle, ArrowLeft, Check, CheckCheck, Clock } from "lucide-react";
+import { AlertCircle, ArrowLeft, Ban, Check, CheckCheck, Clock, Undo2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ReelLinkCard } from "@/components/reels/reel-link-card";
 import { MemberLink } from "@/components/social/member-card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
+import { useHydrated } from "@/components/ui/local-time";
 import { Alert } from "@/components/ui/primitives";
+import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
 import { useRealtime } from "@/lib/realtime";
 import { cn } from "@/lib/utils";
 import type { UploadedAttachment } from "@/lib/attachment-upload";
-import type { ConversationDetail, MessageAttachment, MessageView, ReactionSummary } from "@backend/modules/messaging/types";
+import { reelIdFromText } from "@backend/modules/reels/types";
+import { canUnsend, UNSEND_WINDOW_MS, type ConversationDetail, type MessageAttachment, type MessageView, type ReactionSummary } from "@backend/modules/messaging/types";
 import { Composer, type ComposerSendInput } from "./composer";
 import { EmojiPicker } from "./emoji-picker";
 import { applyReactionEvent, MessageReactions, QuickReact } from "./message-reactions";
@@ -23,18 +28,32 @@ type LocalMessage = MessageView & {
   pendingUploads?: UploadedAttachment[];
 };
 
-const DAY = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "short", day: "numeric" });
-const TIME = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
-
-function dayLabel(iso: string): string {
-  const d = new Date(iso);
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return "Today";
-  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
-  return DAY.format(d);
+/**
+ * Day/time formatting for the thread. The server can't know the member's time zone or locale, so
+ * the server render and hydration use English/UTC, then the thread re-renders in local time right
+ * after hydration (useHydrated) — no hydration mismatch.
+ */
+function threadFormat(local: boolean) {
+  const tz = local ? undefined : "UTC";
+  const locale = local ? undefined : "en";
+  const day = new Intl.DateTimeFormat(locale, { weekday: "long", month: "short", day: "numeric", timeZone: tz });
+  const time = new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit", timeZone: tz });
+  const key = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: tz });
+  const dayKey = (iso: string | number) => key.format(new Date(iso));
+  return {
+    time: (iso: string) => time.format(new Date(iso)),
+    full: (iso: string) => formatDateTime(iso, tz),
+    dayKey,
+    dayLabel(iso: string, now: number): string {
+      const k = dayKey(iso);
+      if (k === dayKey(now)) return "Today";
+      if (k === dayKey(now - 86_400_000)) return "Yesterday";
+      return day.format(new Date(iso));
+    },
+  };
 }
+const SERVER_FORMAT = threadFormat(false);
+const LOCAL_FORMAT = threadFormat(true);
 
 /**
  * A conversation thread. Messages are persisted through the API first; the realtime event that
@@ -60,6 +79,12 @@ export function Thread({
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTypingSent = useRef(0);
+  const [unsendTarget, setUnsendTarget] = useState<LocalMessage | null>(null);
+  const [unsending, setUnsending] = useState(false);
+  const toast = useToast();
+  // Re-render periodically so "Unsend" disappears when a message's 10-minute window closes.
+  const [now, setNow] = useState(() => Date.now());
+  const fmt = useHydrated() ? LOCAL_FORMAT : SERVER_FORMAT;
 
   const upsert = useCallback((incoming: LocalMessage[]) => {
     setMessages((prev) => {
@@ -76,6 +101,12 @@ export function Thread({
 
   const setReactions = useCallback((messageId: string, update: (current: ReactionSummary[]) => ReactionSummary[]) => {
     setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, reactions: update(m.reactions ?? []) } : m)));
+  }, []);
+
+  const markUnsent = useCallback((clientId: string, unsentAt: string) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.clientId === clientId ? { ...m, body: "", attachments: [], reactions: [], unsentAt: m.unsentAt ?? unsentAt } : m)),
+    );
   }, []);
 
   const markRead = useCallback(() => {
@@ -103,6 +134,7 @@ export function Thread({
           body: String(p.body),
           clientId: String(p.client_id),
           createdAt: String(p.created_at),
+          unsentAt: null,
           attachments: [],
         };
         if (m.senderId !== viewerId) {
@@ -115,6 +147,10 @@ export function Thread({
       },
       "message.updated": () => {
         void sync();
+      },
+      "message.unsent": (p) => {
+        if (typeof p.client_id !== "string") return;
+        markUnsent(p.client_id, new Date().toISOString());
       },
       "reaction.changed": (p) => {
         // The viewer's own reactions were already applied optimistically.
@@ -139,6 +175,30 @@ export function Thread({
   useEffect(() => {
     markRead();
   }, [markRead]);
+
+  const hasUnsendable = messages.some((m) => !m.state && canUnsend(m, viewerId, now));
+  useEffect(() => {
+    if (!hasUnsendable) return;
+    const timer = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(timer);
+  }, [hasUnsendable]);
+
+  async function confirmUnsend() {
+    const target = unsendTarget;
+    if (!target) return;
+    setUnsending(true);
+    try {
+      const saved = await api<MessageView>(`/api/v1/messages/${target.id}/unsend`, { method: "POST" });
+      markUnsent(target.clientId, saved.unsentAt ?? new Date().toISOString());
+      setUnsendTarget(null);
+    } catch (e) {
+      toast.show(errorMessage(e));
+      setUnsendTarget(null);
+    } finally {
+      setUnsending(false);
+      setNow(Date.now());
+    }
+  }
 
   // Scroll only when the newest message changes (not when older history is prepended).
   const newestKey = messages.at(-1)?.clientId;
@@ -180,6 +240,7 @@ export function Thread({
       senderId: viewerId,
       body: input.body,
       createdAt: new Date().toISOString(),
+      unsentAt: null,
       attachments: optimisticAttachments,
     };
     void deliver(
@@ -236,19 +297,40 @@ export function Thread({
         {messages.map((m, idx) => {
           const own = m.senderId === viewerId;
           const prev = messages[idx - 1];
-          const newDay = !prev || new Date(prev.createdAt).toDateString() !== new Date(m.createdAt).toDateString();
+          const newDay = !prev || fmt.dayKey(prev.createdAt) !== fmt.dayKey(m.createdAt);
           const grouped = !newDay && prev?.senderId === m.senderId && new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() < 5 * 60_000;
           const read =
             own &&
             !m.state &&
             conversation.readReceipts &&
             (m.readByOthers === true || (otherReadAt !== null && m.createdAt <= otherReadAt));
+          const dayDivider = newDay ? (
+            <p className="my-4 text-center text-[11px] font-medium tracking-wide text-muted uppercase">{fmt.dayLabel(m.createdAt, now)}</p>
+          ) : null;
+          if (m.unsentAt) {
+            return (
+              <div key={m.clientId}>
+                {dayDivider}
+                <div className={cn("flex", own ? "justify-end" : "justify-start", grouped ? "mt-0.5" : "mt-3")}>
+                  <p className="inline-flex items-center gap-1.5 rounded-2xl border border-dashed border-border px-3.5 py-2 text-sm text-muted italic">
+                    <Ban className="size-3.5" aria-hidden="true" />
+                    {own ? "You unsent a message" : "Message unsent"}
+                  </p>
+                </div>
+              </div>
+            );
+          }
+          const unsendable = !m.state && canUnsend(m, viewerId, now);
+          const sharedReel = m.body ? reelIdFromText(m.body) : null;
           return (
             <div key={m.clientId}>
-              {newDay ? (
-                <p className="my-4 text-center text-[11px] font-medium tracking-wide text-muted uppercase">{dayLabel(m.createdAt)}</p>
-              ) : null}
+              {dayDivider}
               <div className={cn("flex flex-col", own ? "items-end" : "items-start", grouped ? "mt-0.5" : "mt-3")}>
+                {sharedReel ? (
+                  <div className="mb-1 flex flex-col">
+                    <ReelLinkCard reelId={sharedReel} own={own} />
+                  </div>
+                ) : null}
                 {m.attachments.length ? (
                   <div className={cn("mb-1", m.state === "sending" && "opacity-70")}>
                     <MessageAttachments attachments={m.attachments} own={own} />
@@ -267,7 +349,23 @@ export function Thread({
                     </div>
                   ) : null}
                   {!m.state ? (
-                    <div className="opacity-100 transition-opacity focus-within:opacity-100 sm:opacity-0 sm:group-hover/msg:opacity-100">
+                    <div
+                      className={cn(
+                        "flex items-center gap-0.5 opacity-100 transition-opacity focus-within:opacity-100 sm:opacity-0 sm:group-hover/msg:opacity-100",
+                        own && "flex-row-reverse",
+                      )}
+                    >
+                      {unsendable ? (
+                        <button
+                          type="button"
+                          onClick={() => setUnsendTarget(m)}
+                          className="rounded-full p-1.5 text-muted hover:bg-surface-2 hover:text-fg"
+                          aria-label="Unsend message"
+                          title="Unsend"
+                        >
+                          <Undo2 className="size-4" aria-hidden="true" />
+                        </button>
+                      ) : null}
                       <QuickReact
                         messageId={m.id}
                         current={m.reactions ?? []}
@@ -300,8 +398,8 @@ export function Thread({
                     </button>
                   ) : (
                     <>
-                      <time dateTime={m.createdAt} title={formatDateTime(m.createdAt)}>
-                        {TIME.format(new Date(m.createdAt))}
+                      <time dateTime={m.createdAt} title={fmt.full(m.createdAt)}>
+                        {fmt.time(m.createdAt)}
                       </time>
                       {own ? (
                         read ? (
@@ -325,6 +423,24 @@ export function Thread({
         })}
         <div ref={bottomRef} />
       </div>
+
+      <Dialog open={unsendTarget !== null} onOpenChange={(open) => (!open && !unsending ? setUnsendTarget(null) : undefined)}>
+        <DialogContent
+          title="Unsend message?"
+          description={`It will be removed for everyone in this conversation, along with any files and reactions. You can unsend for ${UNSEND_WINDOW_MS / 60_000} minutes after sending.`}
+        >
+          <div className="flex justify-end gap-2">
+            <DialogClose asChild>
+              <Button variant="ghost" disabled={unsending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button variant="danger" onClick={confirmUnsend} disabled={unsending}>
+              {unsending ? "Unsending…" : "Unsend"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {conversation.canSend ? (
         <Composer

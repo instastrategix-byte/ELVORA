@@ -6,6 +6,48 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      deal_rooms: {
+        Row: { id: string; owner_id: string; name: string; description: string | null; nda_required: boolean; nda_text: string | null; nda_version: number; status: "open" | "closed" | "archived"; created_at: string; updated_at: string };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      deal_room_members: {
+        Row: { room_id: string; user_id: string; role: "owner" | "admin" | "member" | "viewer"; invited_by: string | null; invited_at: string; joined_at: string | null; nda_accepted_at: string | null; nda_version_accepted: number | null; nda_text_hash: string | null };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      deal_room_documents: {
+        Row: { id: string; room_id: string; storage_path: string; file_name: string; document_key: string; version: number; mime_type: string; size_bytes: number; uploaded_by: string | null; created_at: string; deleted_at: string | null; deleted_by: string | null };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      deal_room_access_log: {
+        Row: { id: number; room_id: string; document_id: string; user_id: string | null; action: "view" | "download"; created_at: string };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      deal_room_messages: {
+        Row: { id: string; room_id: string; author_id: string; body: string; created_at: string };
+        Insert: { room_id: string; body: string; id?: string; author_id?: string; created_at?: string };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      contact_notes: {
+        Row: { owner_id: string; contact_id: string; body: string; tags: string[]; stage: "none" | "warm" | "active" | "deal"; last_contacted_on: string | null; created_at: string; updated_at: string };
+        Insert: { contact_id: string; body?: string; tags?: string[]; stage?: "none" | "warm" | "active" | "deal"; last_contacted_on?: string | null; owner_id?: string };
+        Update: { body?: string; tags?: string[]; stage?: "none" | "warm" | "active" | "deal"; last_contacted_on?: string | null };
+        Relationships: [];
+      };
+      contact_reminders: {
+        Row: { id: string; owner_id: string; contact_id: string; due_on: string; body: string; done_at: string | null; created_at: string };
+        Insert: { contact_id: string; due_on: string; body: string; id?: string; owner_id?: string };
+        Update: { due_on?: string; body?: string; done_at?: string | null };
+        Relationships: [];
+      };
       ad_transactions: {
         Row: { id: string; account_id: string; kind: "top_up" | "spend" | "refund" | "adjustment" | "credit" | "reversal"; amount_minor: number; currency: string; description: string | null; provider: string | null; provider_ref: string | null; idempotency_key: string; created_by: string | null; created_at: string; updated_at: string };
         Insert: { [_ in never]: never };
@@ -144,6 +186,36 @@ export type Database = {
         Update: { note?: string | null; status?: Database["public"]["Enums"]["opportunity_interest_status"] };
         Relationships: [];
       };
+      vouches: {
+        Row: {
+          id: string;
+          voucher_id: string;
+          vouchee_id: string;
+          relationship: Database["public"]["Enums"]["vouch_relationship"];
+          note: string | null;
+          created_at: string;
+          withdrawn_at: string | null;
+        };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      vouch_requests: {
+        Row: {
+          id: string;
+          requester_id: string;
+          voucher_id: string;
+          application_id: string | null;
+          message: string | null;
+          status: Database["public"]["Enums"]["vouch_request_status"];
+          created_at: string;
+          responded_at: string | null;
+          requester_cancelled_at: string | null;
+        };
+        Insert: { [_ in never]: never };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
       introduction_requests: {
         Row: {
           id: string;
@@ -156,6 +228,9 @@ export type Database = {
           declined_by: string | null;
           created_at: string;
           updated_at: string;
+          expires_at: string;
+          forwarded_at: string | null;
+          conversation_id: string | null;
         };
         Insert: { [_ in never]: never };
         Update: { [_ in never]: never };
@@ -1430,6 +1505,7 @@ export type Database = {
           client_id: string;
           created_at: string;
           has_attachments: boolean;
+          unsent_at: string | null;
         };
         Insert: {
           id?: string;
@@ -2104,6 +2180,65 @@ export type Database = {
         };
         Relationships: [];
       };
+      reels: {
+        Row: {
+          id: string;
+          author_id: string;
+          caption: string;
+          video_path: string;
+          poster_path: string | null;
+          duration_s: number;
+          width: number;
+          height: number;
+          visibility: Database["public"]["Enums"]["visibility"];
+          status: Database["public"]["Enums"]["content_status"];
+          like_count: number;
+          comment_count: number;
+          view_count: number;
+          share_count: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          author_id: string;
+          caption?: string;
+          video_path: string;
+          poster_path?: string | null;
+          duration_s: number;
+          width: number;
+          height: number;
+          visibility?: Database["public"]["Enums"]["visibility"];
+        };
+        Update: {
+          caption?: string;
+          visibility?: Database["public"]["Enums"]["visibility"];
+        };
+        Relationships: [];
+      };
+      reel_likes: {
+        Row: { reel_id: string; user_id: string; created_at: string };
+        Insert: { reel_id: string; user_id: string };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      reel_comments: {
+        Row: { id: string; reel_id: string; author_id: string; body: string; created_at: string };
+        Insert: { reel_id: string; author_id: string; body: string };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      reel_views: {
+        Row: { reel_id: string; viewer_id: string; viewed_at: string };
+        Insert: { reel_id: string; viewer_id: string };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
+      reel_shares: {
+        Row: { id: string; reel_id: string; user_id: string; conversation_id: string | null; created_at: string };
+        Insert: { reel_id: string; user_id: string; conversation_id?: string | null };
+        Update: { [_ in never]: never };
+        Relationships: [];
+      };
       stories: {
         Row: {
           id: string;
@@ -2276,6 +2411,24 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      create_deal_room: { Args: { p_name: string; p_description: string | null; p_nda_required: boolean; p_nda_text: string | null }; Returns: string };
+      update_deal_room: { Args: { p_room: string; p_name: string; p_description: string | null; p_nda_required: boolean; p_nda_text: string | null }; Returns: undefined };
+      set_deal_room_status: { Args: { p_room: string; p_status: string }; Returns: undefined };
+      invite_to_deal_room: { Args: { p_room: string; p_user: string; p_role: string }; Returns: undefined };
+      deal_room_invitations: {
+        Args: Record<string, never>;
+        Returns: { room_id: string; name: string; owner_id: string; invited_by: string | null; role: string; invited_at: string; nda_required: boolean; nda_text: string | null; nda_version: number; rejoin: boolean }[];
+      };
+      join_deal_room: { Args: { p_room: string; p_nda_version: number | null }; Returns: undefined };
+      leave_deal_room: { Args: { p_room: string }; Returns: undefined };
+      remove_deal_room_member: { Args: { p_room: string; p_user: string }; Returns: undefined };
+      set_deal_room_member_role: { Args: { p_room: string; p_user: string; p_role: string }; Returns: undefined };
+      add_deal_room_document: { Args: { p_room: string; p_path: string; p_file_name: string; p_mime: string; p_size: number }; Returns: string };
+      remove_deal_room_document: { Args: { p_document: string }; Returns: undefined };
+      open_deal_room_document: { Args: { p_document: string; p_action: string }; Returns: { storage_path: string; file_name: string; mime_type: string }[] };
+      deal_room_role: { Args: { p_room: string }; Returns: string | null };
+      deal_room_can_write: { Args: { p_room: string }; Returns: boolean };
+      crm_contact_allowed: { Args: { p_contact: string }; Returns: boolean };
       add_ad_account_member: { Args: { p_account: string; p_user: string; p_role: Database["public"]["Enums"]["ad_member_role"] }; Returns: undefined };
       set_ad_account_member_role: { Args: { p_account: string; p_user: string; p_role: Database["public"]["Enums"]["ad_member_role"] }; Returns: undefined };
       remove_ad_account_member: { Args: { p_account: string; p_user: string }; Returns: undefined };
@@ -2373,6 +2526,10 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: undefined;
       };
+      business_private_details: {
+        Args: { p_ids: string[] };
+        Returns: { id: string; registration_number: string | null; evidence_paths: string[]; review_note: string | null; reviewed_at: string | null }[];
+      };
       check_invitation: {
         Args: { p_code: string };
         Returns: { valid: boolean | null; plan_id: string | null; plan_name: string | null; pre_approved: boolean | null }[];
@@ -2387,7 +2544,19 @@ export type Database = {
       };
       conversation_summaries: {
         Args: { p_limit?: number; p_before?: string };
-        Returns: { conversation_id: string | null; other_user_id: string | null; last_message_at: string | null; last_message_body: string | null; last_message_sender: string | null; unread_count: number | null }[];
+        Returns: { conversation_id: string | null; other_user_id: string | null; last_message_at: string | null; last_message_body: string | null; last_message_sender: string | null; unread_count: number | null; last_message_unsent: boolean | null }[];
+      };
+      reel_feed: {
+        Args: { p_limit?: number; p_exclude?: string[] };
+        Returns: Database["public"]["Tables"]["reels"]["Row"][];
+      };
+      record_reel_view: {
+        Args: { p_reel: string };
+        Returns: undefined;
+      };
+      unsend_message: {
+        Args: { p_message: string };
+        Returns: string[];
       };
       decide_application: {
         Args: { p_id: string; p_status: Database["public"]["Enums"]["application_status"]; p_notes?: string };
@@ -2482,6 +2651,51 @@ export type Database = {
       respond_introduction_as_introducer: { Args: { p_id: string; p_forward: boolean; p_note?: string | null }; Returns: undefined };
       respond_introduction_as_target: { Args: { p_id: string; p_accept: boolean }; Returns: undefined };
       withdraw_introduction: { Args: { p_id: string }; Returns: undefined };
+      my_introductions: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          role: string;
+          status: string;
+          requester_id: string;
+          introducer_id: string;
+          target_id: string;
+          message: string;
+          introducer_note: string | null;
+          conversation_id: string | null;
+          expires_at: string;
+          created_at: string;
+          updated_at: string;
+        }[];
+      };
+      vouch_for: {
+        Args: { p_vouchee: string; p_relationship: Database["public"]["Enums"]["vouch_relationship"]; p_note?: string | null };
+        Returns: string;
+      };
+      withdraw_vouch: { Args: { p_id: string }; Returns: undefined };
+      set_vouch_hidden: { Args: { p_id: string; p_hidden: boolean }; Returns: undefined };
+      request_vouch: { Args: { p_voucher: string; p_message?: string | null; p_application?: string | null }; Returns: string };
+      respond_vouch_request: {
+        Args: { p_id: string; p_accept: boolean; p_relationship?: Database["public"]["Enums"]["vouch_relationship"] | null; p_note?: string | null };
+        Returns: string | null;
+      };
+      cancel_vouch_request: { Args: { p_id: string }; Returns: undefined };
+      my_sent_vouch_requests: {
+        Args: Record<string, never>;
+        Returns: { id: string; voucher_id: string; application_id: string | null; message: string | null; status: string; created_at: string }[];
+      };
+      my_received_vouches: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          voucher_id: string;
+          relationship: Database["public"]["Enums"]["vouch_relationship"];
+          note: string | null;
+          hidden: boolean;
+          created_at: string;
+        }[];
+      };
+      my_vouch_allowance: { Args: Record<string, never>; Returns: { used: number; cap: number }[] };
       can_refer_members: { Args: { p_user?: string }; Returns: boolean };
       create_member_invitation: {
         Args: { p_email?: string | null; p_note?: string | null };
@@ -2680,19 +2894,21 @@ export type Database = {
       messaging_policy: "connections" | "members" | "nobody";
       moderation_action_type: "hide_content" | "remove_content" | "restore_content" | "warn" | "suspend" | "reinstate";
       profile_link_platform: "instagram" | "linkedin" | "x" | "facebook" | "youtube" | "tiktok" | "pinterest" | "github" | "website" | "other";
-      introduction_status: "pending" | "forwarded" | "accepted" | "declined" | "withdrawn";
+      introduction_status: "pending" | "forwarded" | "accepted" | "declined" | "withdrawn" | "expired";
+      vouch_relationship: "worked_together" | "invested" | "client" | "personal" | "other";
+      vouch_request_status: "pending" | "accepted" | "declined" | "cancelled";
       opportunity_kind: "investment" | "partnership" | "hiring" | "board_seat" | "advisory" | "acquisition" | "other";
       opportunity_visibility: "members" | "connections";
       opportunity_status: "open" | "closed";
       opportunity_interest_status: "pending" | "shortlisted" | "declined" | "withdrawn";
-      notification_type: "connection_request" | "connection_accepted" | "new_follower" | "post_liked" | "post_commented" | "message" | "membership_update" | "application_update" | "verification_update" | "moderation_notice" | "listing_inquiry" | "business_update" | "campaign_update" | "event_update" | "community_reply" | "community_request" | "mention" | "post_reposted" | "introduction" | "opportunity" | "referral_joined";
+      notification_type: "connection_request" | "connection_accepted" | "new_follower" | "post_liked" | "post_commented" | "message" | "membership_update" | "application_update" | "verification_update" | "moderation_notice" | "listing_inquiry" | "business_update" | "campaign_update" | "event_update" | "community_reply" | "community_request" | "mention" | "post_reposted" | "introduction" | "opportunity" | "referral_joined" | "vouch_received" | "vouch_requested" | "deal_room_invite" | "deal_room_document" | "reel_liked" | "reel_commented";
       payment_provider: "stripe" | "razorpay";
       payment_status: "pending" | "paid" | "failed" | "refunded";
       plan_audience: "individual" | "premium" | "professional" | "business" | "advertiser";
       price_unit: "night" | "week" | "month" | "day" | "person" | "event" | "total";
       report_reason: "spam" | "harassment" | "impersonation" | "fraud" | "inappropriate" | "intellectual_property" | "other";
       report_status: "open" | "reviewing" | "actioned" | "dismissed";
-      report_target: "post" | "comment" | "profile" | "listing" | "business" | "message";
+      report_target: "post" | "comment" | "profile" | "listing" | "business" | "message" | "reel";
       staff_role: "support" | "moderator" | "admin";
       subscription_status: "incomplete" | "trialing" | "active" | "past_due" | "unpaid" | "paused" | "canceled" | "expired";
       verification_kind: "identity" | "public_figure" | "executive";

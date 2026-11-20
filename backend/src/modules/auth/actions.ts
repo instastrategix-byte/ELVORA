@@ -6,6 +6,8 @@ import { isSupabaseConfigured, siteUrl } from "@/lib/env";
 import { safeNextPath } from "@/lib/routes";
 import { createClient } from "@backend/db/server";
 import { logger } from "@backend/core/logger";
+import { recordResend, resendWait } from "./resend-limit";
+import { formatWait, RESEND_BASE_SECONDS, type ResendPurpose } from "./resend-policy";
 import { forgotPasswordSchema, otpRequestSchema, otpVerifySchema, resetPasswordSchema, signInSchema, signUpSchema } from "./schemas";
 
 export type AuthFormState = {
@@ -13,7 +15,23 @@ export type AuthFormState = {
   message?: string;
   fieldErrors?: Record<string, string[] | undefined>;
   values?: Record<string, string>;
+  /** When another email may be requested, as epoch ms (drives the resend countdown). */
+  retryAt?: number;
+  /** Emails sent to this address for this purpose in the current 24 h window. */
+  sent?: number;
 };
+
+const at = (seconds: number) => Date.now() + seconds * 1000;
+
+function waitMessage(seconds: number) {
+  return `Please wait ${formatWait(seconds)} before requesting another email.`;
+}
+
+/** Applies the resend cooldown; returns a state to show if the request must wait. */
+async function cooldownBlock(purpose: ResendPurpose, email: string, values?: Record<string, string>): Promise<AuthFormState | null> {
+  const wait = await resendWait(purpose, email);
+  return wait > 0 ? { status: "error", message: waitMessage(wait), retryAt: at(wait), values } : null;
+}
 
 const NOT_CONFIGURED: AuthFormState = {
   status: "error",
@@ -55,6 +73,8 @@ export async function requestOtpAction(_prev: AuthFormState, formData: FormData)
   const email = String(formData.get("email") ?? "");
   const parsed = otpRequestSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrors(parsed.error), values: { email } };
+  const blocked = await cooldownBlock("otp", parsed.data.email, { email: parsed.data.email });
+  if (blocked) return blocked;
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({
@@ -66,17 +86,25 @@ export async function requestOtpAction(_prev: AuthFormState, formData: FormData)
     },
   });
   if (error && (error.status === 429 || error.code === "over_email_send_rate_limit")) {
-    return { status: "error", message: "Too many codes requested. Please wait a few minutes and try again.", values: { email } };
+    return {
+      status: "error",
+      message: "Too many codes requested. Please wait a few minutes and try again.",
+      retryAt: at(Math.max(RESEND_BASE_SECONDS, await resendWait("otp", parsed.data.email))),
+      values: { email },
+    };
   }
   if (error && (error.status ?? 500) >= 500) {
     logger.warn("auth.otp_send_failed", { code: error.code, status: error.status });
     return { status: "error", message: "We couldn't send a code right now. Please try again shortly.", values: { email } };
   }
-  // Unknown addresses (otp_disabled / user_not_found) get the same answer as real ones.
+  // Unknown addresses (otp_disabled / user_not_found) get the same answer — and the same cooldown — as real ones.
+  const { wait, sent } = await recordResend("otp", parsed.data.email);
   return {
     status: "success",
     message: "If an account exists for that email, we've sent a sign-in code. It expires in one hour.",
     values: { email: parsed.data.email },
+    retryAt: at(wait),
+    sent,
   };
 }
 
@@ -144,6 +172,8 @@ export async function signUpAction(_prev: AuthFormState, formData: FormData): Pr
     return { status: "error", message: signUpErrorMessage(error.code, error.status), values };
   }
   // With email confirmation enabled there is no session until the link is followed.
+  // The sign-up email counts as the first send, so "Resend" starts with a countdown.
+  if (!data.session) await recordResend("verify", parsed.data.email);
   if (!data.session) redirect(`/verify-email?email=${encodeURIComponent(parsed.data.email)}`);
   redirect(next === "/onboarding" ? "/onboarding" : `/onboarding?next=${encodeURIComponent(next)}`);
 }
@@ -152,13 +182,25 @@ export async function forgotPasswordAction(_prev: AuthFormState, formData: FormD
   if (!isSupabaseConfigured()) return NOT_CONFIGURED;
   const parsed = forgotPasswordSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrors(parsed.error) };
+  const values = { email: parsed.data.email };
+  const blocked = await cooldownBlock("reset", parsed.data.email, values);
+  if (blocked) return blocked;
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: siteUrl("/auth/callback?next=/reset-password"),
   });
-  if (error?.status === 429) return { status: "error", message: "Too many requests. Please wait a few minutes and try again." };
-  // Same response whether or not the address is registered (prevents account enumeration).
-  return { status: "success", message: "If an account exists for that email, a reset link is on its way. It expires in one hour." };
+  if (error?.status === 429) {
+    return { status: "error", message: "Too many requests. Please wait a few minutes and try again.", retryAt: at(RESEND_BASE_SECONDS), values };
+  }
+  // Same response — and cooldown — whether or not the address is registered (prevents account enumeration).
+  const { wait, sent } = await recordResend("reset", parsed.data.email);
+  return {
+    status: "success",
+    message: "If an account exists for that email, a reset link is on its way. It expires in one hour.",
+    retryAt: at(wait),
+    sent,
+    values,
+  };
 }
 
 export async function resetPasswordAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
@@ -186,12 +228,18 @@ export async function resendVerificationAction(_prev: AuthFormState, formData: F
   if (!isSupabaseConfigured()) return NOT_CONFIGURED;
   const parsed = forgotPasswordSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrors(parsed.error) };
+  const values = { email: parsed.data.email };
+  const blocked = await cooldownBlock("verify", parsed.data.email, values);
+  if (blocked) return blocked;
   const supabase = await createClient();
   const { error } = await supabase.auth.resend({
     type: "signup",
     email: parsed.data.email,
     options: { emailRedirectTo: siteUrl("/auth/callback?next=/onboarding") },
   });
-  if (error?.status === 429) return { status: "error", message: "Please wait a minute before requesting another email." };
-  return { status: "success", message: "If that address is awaiting verification, we've sent a new link." };
+  if (error?.status === 429) {
+    return { status: "error", message: "Please wait a minute before requesting another email.", retryAt: at(RESEND_BASE_SECONDS), values };
+  }
+  const { wait, sent } = await recordResend("verify", parsed.data.email);
+  return { status: "success", message: "If that address is awaiting verification, we've sent a new link.", retryAt: at(wait), sent, values };
 }

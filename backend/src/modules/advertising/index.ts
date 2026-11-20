@@ -7,5 +7,6 @@ export * from "./services/creatives";
 export * from "./services/audiences";
 export * from "./services/reviews";
 export * from "./services/analytics";
+export * from "./services/library";
 export * from "./delivery";
 export type * from "./types";

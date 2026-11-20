@@ -7,8 +7,8 @@ import { Select } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api-client";
-import { formatDate } from "@/lib/format";
 import type { InquiryView } from "@backend/modules/listings/types";
+import { LocalTime } from "@/components/ui/local-time";
 
 export function InquiryTable({ inquiries, mode }: { inquiries: InquiryView[]; mode: "received" | "sent" }) {
   const [items, setItems] = useState(inquiries);
@@ -57,7 +57,7 @@ export function InquiryTable({ inquiries, mode }: { inquiries: InquiryView[]; mo
                     ·{" "}
                   </>
                 ) : null}
-                {formatDate(i.createdAt)}
+                <LocalTime iso={i.createdAt} format="date" />
                 {i.preferredDates ? ` · ${i.preferredDates}` : ""}
                 {i.partySize ? ` · ${i.partySize} guests` : ""}
               </p>

@@ -12,6 +12,11 @@ const publicSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
+  /** Mobile-number sign-in by SMS code. Turn on only after an SMS provider is set up in Supabase Auth. */
+  NEXT_PUBLIC_AUTH_PHONE_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
   /** Where members can write for help. Optional: the Help page omits the address when unset. */
   NEXT_PUBLIC_SUPPORT_EMAIL: z.email().optional(),
 });
@@ -26,6 +31,7 @@ export function publicEnv(): PublicEnv {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || undefined,
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || undefined,
     NEXT_PUBLIC_AUTH_GOOGLE_ENABLED: process.env.NEXT_PUBLIC_AUTH_GOOGLE_ENABLED || undefined,
+    NEXT_PUBLIC_AUTH_PHONE_ENABLED: process.env.NEXT_PUBLIC_AUTH_PHONE_ENABLED || undefined,
     NEXT_PUBLIC_SUPPORT_EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || undefined,
   });
   return cachedPublic;

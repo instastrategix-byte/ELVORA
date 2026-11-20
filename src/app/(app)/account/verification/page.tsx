@@ -6,10 +6,10 @@ import { VerificationForm } from "@/components/account/verification-form";
 import { ServiceNotice } from "@/components/feedback/service-notice";
 import { StatusBadge } from "@/components/membership/status-badge";
 import { Card } from "@/components/ui/primitives";
-import { formatDate } from "@/lib/format";
 import { VERIFICATION_LABELS, type VerificationKind } from "@backend/modules/auth/permissions";
 import { getMembershipOverview } from "@backend/modules/membership/service";
 import { requirePageSession } from "@backend/auth/viewer";
+import { LocalTime } from "@/components/ui/local-time";
 
 export const metadata: Metadata = { title: "Verification" };
 
@@ -81,8 +81,8 @@ export default async function VerificationPage() {
                 <div>
                   <p className="font-medium">{VERIFICATION_LABELS[v.kind]}</p>
                   <p className="text-sm text-muted">
-                    Requested {formatDate(v.createdAt)}
-                    {v.reviewedAt ? ` · Reviewed ${formatDate(v.reviewedAt)}` : " · Typically reviewed within 5 business days"}
+                    Requested <LocalTime iso={v.createdAt} format="date" />
+                    {v.reviewedAt ? <> · Reviewed <LocalTime iso={v.reviewedAt} format="date" /></> : " · Typically reviewed within 5 business days"}
                   </p>
                   {v.reviewerNotes ? <p className="mt-1 text-sm text-muted">Reviewer note: {v.reviewerNotes}</p> : null}
                 </div>

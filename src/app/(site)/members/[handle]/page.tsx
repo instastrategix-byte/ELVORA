@@ -3,24 +3,29 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { PrivateNotesCard } from "./private-notes-card";
 import { ServiceNotice } from "@/components/feedback/service-notice";
 import { PostList } from "@/components/feed/post-list";
 import { PlatformIcon } from "@/components/profile/platform-icons";
+import { ProfileContentTabs } from "@/components/reels/profile-content-tabs";
 import { BusinessCardActions, ProfileViewBeacon, RequestIntroductionButton } from "@/components/profile/profile-extras";
 import { ProfileActions } from "@/components/social/profile-actions";
+import { AskForVouchButton, ProfileVouchesCard, VouchButton } from "@/components/vouches/vouch-ui";
 import { Button } from "@/components/ui/button";
 import { experienceRange } from "@/components/profile/experience-format";
 import { Alert, Avatar, Badge, Card, Skeleton } from "@/components/ui/primitives";
 import { VerifiedBadges } from "@/components/ui/verified-badge";
 import { attempt } from "@/lib/attempt";
-import { formatDate, titleCase } from "@/lib/format";
+import { titleCase } from "@/lib/format";
 import { createClient } from "@backend/db/server";
 import { hasFeature } from "@backend/modules/auth/permissions";
 import { listAuthorPosts } from "@backend/modules/feed/service";
 import { PLATFORMS, linkDisplay } from "@backend/modules/profiles/links";
 import { getProfileByHandle, getRelationship } from "@backend/modules/profiles/service";
 import { MEMBER_TYPE_LABELS, OPEN_TO_LABELS, type ProfileDetail } from "@backend/modules/profiles/types";
+import { listProfileVouches, myVouchFor } from "@backend/modules/vouches/service";
 import { getSession } from "@backend/auth/viewer";
+import { LocalTime } from "@/components/ui/local-time";
 
 type Params = Promise<{ handle: string }>;
 
@@ -67,11 +72,15 @@ async function Profile({ params }: { params: Params }) {
     } else {
       const isSelf = viewer?.id === profile.id;
       const viewerIsMember = Boolean(viewer?.onboarded && viewer.accountStatus === "active");
-      const [relationship, posts] = await Promise.all([
+      const [relationship, posts, vouches, myVouch] = await Promise.all([
         viewer && viewerIsMember && !isSelf ? getRelationship(db, viewer, profile.id) : Promise.resolve(null),
         listAuthorPosts(db, viewer, profile.id),
+        // Vouches are for signed-in members only (RLS checks both profiles and blocks).
+        // Optional extras: if they fail, the profile still renders without them.
+        viewerIsMember ? listProfileVouches(db, profile.id).catch(() => null) : Promise.resolve(null),
+        viewer && viewerIsMember && !isSelf ? myVouchFor(db, viewer, profile.id).catch(() => null) : Promise.resolve(null),
       ]);
-      data = { profile, isSelf, viewerIsMember, relationship, posts, canConnect: hasFeature(viewer, "connections.request") };
+      data = { profile, isSelf, viewerIsMember, relationship, posts, vouches, myVouch, canConnect: hasFeature(viewer, "connections.request") };
     }
   } catch (error) {
     return (
@@ -82,7 +91,8 @@ async function Profile({ params }: { params: Params }) {
   }
   // Private profiles are indistinguishable from missing ones (RLS returns no row).
   if (!data) notFound();
-  const { profile, isSelf, viewerIsMember, relationship, posts, canConnect } = data;
+  const { profile, isSelf, viewerIsMember, relationship, posts, vouches, myVouch, canConnect } = data;
+  const connected = relationship?.connection?.status === "accepted" && !relationship.blocked;
 
   return (
     <div className="pb-10">
@@ -110,6 +120,8 @@ async function Profile({ params }: { params: Params }) {
                 {canConnect && relationship.connection?.status !== "accepted" && !relationship.blocked ? (
                   <RequestIntroductionButton targetId={profile.id} targetName={profile.displayName} />
                 ) : null}
+                {connected || myVouch ? <VouchButton voucheeId={profile.id} name={profile.displayName} existingVouchId={myVouch?.id ?? null} /> : null}
+                {connected ? <AskForVouchButton voucherId={profile.id} name={profile.displayName} /> : null}
               </>
             ) : !viewerIsMember ? (
               <Button asChild>
@@ -131,6 +143,15 @@ async function Profile({ params }: { params: Params }) {
                 </div>
               </div>
               {profile.headline ? <p className="text-lg">{profile.headline}</p> : null}
+              {vouches ? <ProfileVouchesCard vouches={vouches} name={profile.displayName} /> : null}
+              {isSelf && vouches?.total === 0 ? (
+                <p className="text-xs text-muted">
+                  No vouches yet.{" "}
+                  <Link href="/vouches?tab=received" className="text-accent hover:underline">
+                    Ask connections who know your work
+                  </Link>
+                </p>
+              ) : null}
               <BusinessCardActions handle={profile.handle} displayName={profile.displayName} />
               {viewerIsMember && !isSelf ? <ProfileViewBeacon profileId={profile.id} /> : null}
               <ul className="space-y-2 text-sm text-muted">
@@ -144,7 +165,7 @@ async function Profile({ params }: { params: Params }) {
                     <MapPin className="size-4" aria-hidden="true" /> {profile.location}
                   </li>
                 ) : null}
-                <li>Member since {formatDate(profile.memberSince)}</li>
+                <li>Member since <LocalTime iso={profile.memberSince} format="date" /></li>
               </ul>
               <SocialLinks links={profile.links} />
               {isSelf ? (
@@ -156,6 +177,12 @@ async function Profile({ params }: { params: Params }) {
                 </p>
               ) : null}
             </section>
+
+            {viewerIsMember && !isSelf ? (
+              <Suspense fallback={null}>
+                <PrivateNotesCard contactId={profile.id} name={profile.displayName} />
+              </Suspense>
+            ) : null}
 
             {profile.openTo.length ? (
               <Card className="p-5">
@@ -241,20 +268,30 @@ async function Profile({ params }: { params: Params }) {
             ) : null}
           </div>
 
-          <section aria-label="Posts">
-            <h2 className="display mb-4 text-2xl">Posts</h2>
-            {!viewerIsMember ? (
-              <Alert tone="info" className="mb-4">
-                You&apos;re seeing public posts only.
-              </Alert>
-            ) : null}
-            <PostList
-              initial={posts}
-              endpoint={`/api/v1/members/${profile.id}/posts`}
-              canInteract={viewerIsMember}
-              emptyTitle="No posts to show"
-              emptyDescription={isSelf ? "Share your first update from your feed." : "Posts you're allowed to see will appear here."}
-            />
+          <section aria-label="Posts and reels">
+            {(() => {
+              const postList = (
+                <PostList
+                  initial={posts}
+                  endpoint={`/api/v1/members/${profile.id}/posts`}
+                  canInteract={viewerIsMember}
+                  emptyTitle="No posts to show"
+                  emptyDescription={isSelf ? "Share your first update from your feed." : "Posts you're allowed to see will appear here."}
+                />
+              );
+              // Reels are members-only, so signed-out visitors see posts alone.
+              return viewerIsMember ? (
+                <ProfileContentTabs authorId={profile.id} isSelf={isSelf} posts={postList} />
+              ) : (
+                <>
+                  <h2 className="display mb-4 text-2xl">Posts</h2>
+                  <Alert tone="info" className="mb-4">
+                    You&apos;re seeing public posts only.
+                  </Alert>
+                  {postList}
+                </>
+              );
+            })()}
           </section>
         </div>
       </div>

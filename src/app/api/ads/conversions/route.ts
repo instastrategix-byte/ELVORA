@@ -17,6 +17,7 @@ export async function POST(request: Request) {
   if (!rateLimit(`ads-conversions:${key}`, 1200, 60_000).ok) {
     return Response.json({ error: "rate_limited" }, { status: 429, headers: { "retry-after": "60" } });
   }
+  if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY) return Response.json({ error: "payload_too_large" }, { status: 413 });
   const raw = await request.text();
   if (raw.length > MAX_BODY) return Response.json({ error: "payload_too_large" }, { status: 413 });
 

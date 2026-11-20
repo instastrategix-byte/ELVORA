@@ -7,18 +7,18 @@ import type { ListingCategory } from "@backend/modules/listings/schemas";
  */
 export const SITE_MEDIA = {
   hero: {
-    primary: null as string | null, // portrait, ~3:4 — e.g. a villa or residence
-    secondary: null as string | null, // square — e.g. a yacht or supercar
+    primary: "/images/business-jet-apron.webp" as string | null, // portrait, ~3:4
+    secondary: "/images/superyacht-on-water.webp" as string | null, // square
   },
   categories: {
-    hotel: null,
-    resort: null,
-    villa: null,
+    hotel: "/images/modern-luxury-hotel-dusk.webp",
+    resort: "/images/luxury-resort-infinity-pool.webp",
+    villa: "/images/modern-villa-architecture.webp",
     apartment: null,
     supercar: null,
-    yacht: null,
-    aviation: null,
-    event: null,
-    experience: null,
+    yacht: "/images/superyacht-on-water.webp",
+    aviation: "/images/business-jet-apron.webp",
+    event: "/images/business-gala-luxury-venue.webp",
+    experience: "/images/private-dining-terrace.webp",
   } satisfies Record<ListingCategory, string | null> as Record<ListingCategory, string | null>,
 };

@@ -23,6 +23,10 @@ export function describeNotification(n: NotificationView): { text: string; href:
         text: n.payload.source === "comment" ? `${who} mentioned you in a comment` : `${who} mentioned you in a post`,
         href: n.entityId ? `/posts/${n.entityId}` : null,
       };
+    case "reel_liked":
+      return { text: `${who} liked your reel`, href: n.entityId ? `/reels/${n.entityId}` : "/reels" };
+    case "reel_commented":
+      return { text: `${who} commented on your reel`, href: n.entityId ? `/reels/${n.entityId}?comments=1` : "/reels" };
     case "message":
       return { text: `New message from ${who}`, href: n.entityId ? `/messages/${n.entityId}` : "/messages" };
     case "membership_update":
@@ -38,7 +42,7 @@ export function describeNotification(n: NotificationView): { text: string; href:
     case "business_update":
       return { text: `Business review update: ${status}`, href: "/business" };
     case "campaign_update":
-      return { text: `Campaign review update: ${status}`, href: n.entityId ? `/ads/campaigns/${n.entityId}` : "/ads" };
+      return { text: `Campaign review update: ${status}`, href: n.entityId ? `/ads/campaigns/${n.entityId}` : "/ads-manager" };
     case "community_reply": {
       const title = typeof n.payload.title === "string" ? `“${n.payload.title}”` : "your discussion";
       const slug = typeof n.payload.slug === "string" ? n.payload.slug : null;
@@ -74,11 +78,27 @@ export function describeNotification(n: NotificationView): { text: string; href:
             ? `${who} made an introduction`
             : st === "accepted"
               ? `${who} accepted an introduction — you're now connected`
-              : st === "declined"
-                ? "An introduction request was declined"
+              : st === "declined" || st === "unavailable"
+                ? "An introduction you asked for isn't available right now"
                 : "Introduction update";
       return { text, href: st === "pending" ? "/introductions" : st === "forwarded" ? "/introductions?tab=received" : "/introductions?tab=sent" };
     }
+    case "deal_room_invite": {
+      const name = typeof n.payload.name === "string" ? `“${n.payload.name}”` : "a deal room";
+      return { text: `${who} invited you to the deal room ${name}`, href: "/deal-rooms" };
+    }
+    case "deal_room_document": {
+      const file = typeof n.payload.file === "string" ? n.payload.file : "a document";
+      const name = typeof n.payload.name === "string" ? `“${n.payload.name}”` : "a deal room";
+      return { text: `${who} shared ${file} in ${name}`, href: n.entityId ? `/deal-rooms/${n.entityId}` : "/deal-rooms" };
+    }
+    case "vouch_received":
+      return { text: `${who} vouched for you`, href: "/vouches?tab=received" };
+    case "vouch_requested":
+      return {
+        text: n.payload.application === true ? `${who} named you as a referee on their application` : `${who} asked you to vouch for them`,
+        href: "/vouches",
+      };
     case "referral_joined":
       return { text: `${who} applied to ELVORA with your invitation`, href: "/account/referrals" };
     case "opportunity": {

@@ -7,7 +7,7 @@ import { ServiceNotice } from "@/components/feedback/service-notice";
 import { StatusBadge } from "@/components/membership/status-badge";
 import { Button } from "@/components/ui/button";
 import { Alert, Card, EmptyState, PageHeader } from "@/components/ui/primitives";
-import { formatDate } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
 import { hasFeature } from "@backend/modules/auth/permissions";
 import { CATEGORY_LABELS } from "@backend/modules/listings/schemas";
 import { getOwnBusiness, listOwnListings } from "@backend/modules/listings/service";
@@ -119,7 +119,7 @@ export default async function BusinessPage() {
                     </Link>
                     <p className="text-sm text-muted">
                       {CATEGORY_LABELS[l.category]} · {l.visibility === "members" ? "Members only" : "Public"}
-                      {l.publishedAt ? ` · Published ${formatDate(l.publishedAt)}` : ""}
+                      {l.publishedAt ? <> · Published <LocalTime iso={l.publishedAt} format="date" /></> : null}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

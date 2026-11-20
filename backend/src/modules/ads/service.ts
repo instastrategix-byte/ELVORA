@@ -2,6 +2,7 @@ import "server-only";
 import type { Database } from "@backend/db/database.types";
 import type { z } from "zod";
 import { AppError } from "@/lib/errors";
+import { isSafeDestination } from "@/lib/safe-url";
 import { toMinorUnits } from "@/lib/format";
 import type { DbClient } from "@backend/db/server";
 import type { Viewer } from "@backend/modules/auth/permissions";
@@ -215,7 +216,10 @@ export async function serveAds(db: DbClient, placement: "feed" | "luxury" | "dis
 export async function recordClick(db: DbClient, impressionId: string): Promise<{ url: string }> {
   const rows = unwrap(await db.rpc("record_ad_click", { p_impression: impressionId }));
   const row = rows[0];
-  if (row?.destination_url) return { url: row.destination_url };
+  if (row?.destination_url) {
+    if (isSafeDestination(row.destination_url)) return { url: row.destination_url };
+    throw new AppError("not_found", "This sponsored item has no valid destination.");
+  }
   if (row?.listing_id) {
     const listing = unwrap(await db.from("listings").select("slug").eq("id", row.listing_id).maybeSingle());
     if (listing) return { url: `/luxury/${listing.slug}` };

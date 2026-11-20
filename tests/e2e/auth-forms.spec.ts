@@ -18,6 +18,9 @@ test.describe("auth forms", () => {
     await page.getByLabel("Email").fill("nobody@example.test");
     await page.getByRole("button", { name: "Send reset link" }).click();
     await expect(page.getByText(/If an account exists/)).toBeVisible();
+    // Resending is held back with a visible countdown.
+    const again = page.getByRole("button", { name: /Send another link in \d+s/ });
+    await expect(again).toBeDisabled();
   });
 
   test("sign-in links to recovery and sign-up", async ({ page }) => {
@@ -42,6 +45,7 @@ test.describe("auth forms", () => {
     await page.getByRole("button", { name: "Email me a code" }).click();
     await expect(page.getByText(/If an account exists/)).toBeVisible();
     await expect(page.getByLabel(/Code sent to/)).toBeVisible();
+    await expect(page.getByRole("button", { name: /Send a new code in \d+s/ })).toBeDisabled();
   });
 
   test("auth codes that land on the home page are handed to the callback", async ({ request }) => {
