@@ -1,4 +1,4 @@
-import { Inbox, Plus } from "lucide-react";
+import { CheckCircle2, Circle, Inbox, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BusinessForm, SubmitBusinessButton } from "@/components/business/business-form";
@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Alert, Card, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { LocalTime } from "@/components/ui/local-time";
 import { hasFeature } from "@backend/modules/auth/permissions";
+import { businessReadiness, missingRequired } from "@backend/modules/listings/readiness";
 import { CATEGORY_LABELS } from "@backend/modules/listings/schemas";
+import type { BusinessDetail } from "@backend/modules/listings/types";
 import { getOwnBusiness, listOwnListings } from "@backend/modules/listings/service";
 import { requirePageSession } from "@backend/auth/viewer";
 
@@ -88,13 +90,11 @@ export default async function BusinessPage() {
             {business.reviewNote && business.status === "rejected" ? <p className="text-sm">Reviewer note: {business.reviewNote}</p> : null}
           </div>
           {business.status === "draft" || business.status === "rejected" ? (
-            <SubmitBusinessButton businessId={business.id} disabled={!canManage || business.evidencePaths.length === 0} />
+            <SubmitBusinessButton businessId={business.id} disabled={!canManage || missingRequired(business).length > 0} />
           ) : null}
         </Card>
       ) : null}
-      {business && (business.status === "draft" || business.status === "rejected") && business.evidencePaths.length === 0 ? (
-        <Alert tone="info">Upload verification documents below before submitting.</Alert>
-      ) : null}
+      {!business || business.status === "draft" || business.status === "rejected" ? <ProfileChecklist business={business} /> : null}
       {!canManage && business ? (
         <Alert tone="warning" title="Your Luxury Business membership is not active">Listings stay unpublished until the membership is active again.</Alert>
       ) : null}
@@ -140,5 +140,74 @@ export default async function BusinessPage() {
         </section>
       ) : null}
     </div>
+  );
+}
+
+/** What's done and what's still missing before the profile can be sent for verification. */
+function ProfileChecklist({ business }: { business: BusinessDetail | null }) {
+  const items = businessReadiness(
+    business ?? {
+      name: null,
+      category: null,
+      description: null,
+      location: null,
+      website: null,
+      contactEmail: null,
+      registrationNumber: null,
+      logoPath: null,
+      evidencePaths: [],
+    },
+  );
+  const required = items.filter((i) => i.required);
+  const doneCount = required.filter((i) => i.done).length;
+  const missing = required.filter((i) => !i.done);
+  const recommended = items.filter((i) => !i.required && !i.done);
+  return (
+    <Card className="space-y-4 p-6" aria-labelledby="checklist-title">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="checklist-title" className="font-medium">
+          Profile checklist
+        </h2>
+        <p className="text-sm text-muted">
+          {doneCount} of {required.length} required items complete
+        </p>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-border" aria-hidden="true">
+        <div className="h-full rounded-full bg-gold transition-[width]" style={{ width: `${Math.round((doneCount / required.length) * 100)}%` }} />
+      </div>
+      {missing.length ? (
+        <Alert tone="info" title={`Still needed before you can submit (${missing.length})`}>
+          Fill these in the form below, save, then submit for verification.
+        </Alert>
+      ) : (
+        <Alert tone="success" title="Ready to submit">
+          Everything required is in place. Save any changes, then submit for verification.
+        </Alert>
+      )}
+      <ul className="grid gap-3 sm:grid-cols-2">
+        {items.map((i) => (
+          <li key={i.key} className="flex gap-3 text-sm">
+            {i.done ? (
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />
+            ) : (
+              <Circle className={`mt-0.5 size-4 shrink-0 ${i.required ? "text-accent" : "text-muted"}`} aria-hidden="true" />
+            )}
+            <span>
+              <span className={i.done ? "text-muted line-through decoration-border" : "font-medium"}>{i.label}</span>
+              <span className="sr-only">{i.done ? " — done" : i.required ? " — missing, required" : " — missing, recommended"}</span>
+              {!i.done ? (
+                <span className="block text-xs text-muted">
+                  {i.required ? "Required. " : "Recommended. "}
+                  {i.hint}
+                </span>
+              ) : null}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {recommended.length && !missing.length ? (
+        <p className="text-xs text-muted">Optional but recommended: {recommended.map((i) => i.label.toLowerCase()).join(", ")}.</p>
+      ) : null}
+    </Card>
   );
 }

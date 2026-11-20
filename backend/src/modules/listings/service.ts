@@ -17,6 +17,7 @@ import type {
   listingSchema,
   ListingCategory,
 } from "./schemas";
+import { missingRequired } from "./readiness";
 import type { BusinessDetail, BusinessSummary, InquiryView, ListingCard, ListingDetail } from "./types";
 
 const PAGE = 24;
@@ -143,6 +144,12 @@ export async function saveBusiness(db: DbClient, viewer: Viewer, input: z.infer<
 }
 
 export async function submitBusiness(db: DbClient, businessId: string) {
+  const row = unwrap(await db.from("businesses").select(BUSINESS_PUBLIC_COLUMNS).eq("id", businessId).maybeSingle());
+  if (!row) throw new AppError("not_found", "Business not found.");
+  const missing = missingRequired(toBusinessDetail(await withPrivate(db, row)));
+  if (missing.length) {
+    throw new AppError("business_rule", `Before submitting, please add: ${missing.join(", ")}.`);
+  }
   unwrap(await db.rpc("submit_business_for_review", { p_id: businessId }));
 }
 

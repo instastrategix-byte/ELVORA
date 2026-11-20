@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createMigratedDb } from "./pglite";
+import { asUser, createMigratedDb } from "./pglite";
 
 const SUPABASE_DIR = fileURLToPath(new URL("../../supabase", import.meta.url));
 
@@ -62,19 +62,24 @@ async function count(sql: string): Promise<number> {
 
 describe("demo seed dataset", () => {
   it("loads in reset order: seed.sql first, then seeds/*.sql", () => {
-    expect(seedFiles()).toEqual(["seed.sql", path.join("seeds", "demo.sql"), path.join("seeds", "demo_communities.sql")]);
+    expect(seedFiles()).toEqual([
+      "seed.sql",
+      path.join("seeds", "demo.sql"),
+      path.join("seeds", "demo_communities.sql"),
+      path.join("seeds", "demo_features.sql"),
+    ]);
   });
 
-  it("has 30 onboarded professional profiles, all marked as demo", async () => {
-    expect(await count(`select count(*) from public.profiles where bio like 'Demo profile —%'`)).toBeGreaterThanOrEqual(30);
+  it("has 31 onboarded professional profiles, all marked as demo", async () => {
+    expect(await count(`select count(*) from public.profiles where bio like 'Demo profile —%'`)).toBeGreaterThanOrEqual(31);
     expect(await count(`select count(*) from public.profiles where onboarding_completed_at is null`)).toBe(0);
     expect(await count(`select count(*) from public.profiles where bio not like 'Demo profile —%' or bio is null`)).toBe(0);
     expect(await count(`select count(*) from public.profile_experiences`)).toBeGreaterThanOrEqual(25);
     expect(await count(`select count(*) from auth.users where email not like '%@seed.elvora.test'`)).toBe(0);
   });
 
-  it("has a connected network with 50 posts, likes, comments and mentions", async () => {
-    expect(await count(`select count(*) from public.posts`)).toBe(50);
+  it("has a connected network with 52 posts, likes, comments and mentions", async () => {
+    expect(await count(`select count(*) from public.posts`)).toBe(52);
     expect(await count(`select count(*) from public.connections where status = 'accepted'`)).toBeGreaterThan(20);
     expect(await count(`select count(*) from public.follows`)).toBeGreaterThan(20);
     expect(await count(`select count(*) from public.post_likes`)).toBeGreaterThan(50);
@@ -94,9 +99,9 @@ describe("demo seed dataset", () => {
     expect(await count(`select count(*) from public.event_rsvps`)).toBeGreaterThan(10);
   });
 
-  it("has 15 listings from approved businesses that are all labelled (Demo)", async () => {
-    expect(await count(`select count(*) from public.listings`)).toBe(15);
-    expect(await count(`select count(*) from public.businesses where status = 'approved'`)).toBe(4);
+  it("has 16 listings from approved businesses that are all labelled (Demo)", async () => {
+    expect(await count(`select count(*) from public.listings`)).toBe(16);
+    expect(await count(`select count(*) from public.businesses where status = 'approved'`)).toBe(5);
     expect(await count(`select count(*) from public.listings l join public.businesses b on b.id = l.business_id where b.name not like '%(Demo)'`)).toBe(0);
     const categories = await db.query<{ category: string }>(`select distinct category::text as category from public.listings order by 1`);
     expect(categories.rows.map((r) => r.category)).toEqual(expect.arrayContaining(["hotel", "resort", "villa", "yacht", "supercar", "experience"]));
@@ -117,4 +122,114 @@ describe("demo seed dataset", () => {
     expect(await count(`select count(*) from public.community_replies`)).toBe(40);
     expect(await count(`select count(*) from public.communities c where c.member_count <> (select count(*) from public.community_members m where m.community_id = c.id and m.status = 'active')`)).toBe(0);
   });
+});
+
+const ME = "00000031-5eed-4000-8000-000000000031";
+
+describe("demo feature showcase (demo_features.sql)", () => {
+  it("has a complete, verified admin showcase account with every paid plan", async () => {
+    const { rows } = await db.query<{ handle: string; verified: string[]; role: string; bio: string }>(
+      `select p.handle, p.verified_kinds::text[] as verified, s.role::text as role, p.bio
+       from public.profiles p join public.staff_roles s on s.user_id = p.id where p.id = $1`,
+      [ME],
+    );
+    expect(rows[0]).toMatchObject({ handle: "instastrategix_demo", verified: ["identity"], role: "admin" });
+    expect(rows[0]!.bio.startsWith("Demo profile —")).toBe(true);
+    expect(await count(`select count(*) from auth.users where id = '${ME}' and email = 'instastrategix@seed.elvora.test'`)).toBe(1);
+    expect(
+      await count(`select count(*) from public.membership_plans p where p.active and not p.is_free
+        and not exists (select 1 from public.plan_grants g where g.user_id = '${ME}' and g.plan_id = p.id and g.expires_at > now())`),
+    ).toBe(0);
+    expect(await count(`select count(*) from public.profile_experiences where profile_id = '${ME}'`)).toBe(2);
+    expect(await count(`select count(*) from public.profile_links where profile_id = '${ME}'`)).toBe(2);
+    expect(await count(`select cardinality(achievements) from public.profiles where id = '${ME}'`)).toBe(3);
+  });
+
+  it("has an approved business with nothing required missing, and a published listing", async () => {
+    expect(
+      await count(`select count(*) from public.businesses where owner_id = '${ME}' and status = 'approved'
+        and name like '%(Demo)' and char_length(description) >= 80 and location is not null and contact_email is not null
+        and registration_number is not null and cardinality(evidence_paths) > 0 and website is not null`),
+    ).toBe(1);
+    expect(
+      await count(`select count(*) from public.listings l join public.businesses b on b.id = l.business_id
+        where b.owner_id = '${ME}' and l.status = 'published'`),
+    ).toBe(1);
+  });
+
+  it("serves the approved demo campaign and keeps the second one in the review queue", async () => {
+    expect(await count(`select count(*) from public.ad_campaigns c join public.advertiser_accounts a on a.id = c.advertiser_account_id where a.owner_id = '${ME}' and c.status = 'active'`)).toBe(1);
+    expect(await count(`select count(*) from public.ad_campaigns c join public.advertiser_accounts a on a.id = c.advertiser_account_id where a.owner_id = '${ME}' and c.status = 'pending_review'`)).toBe(1);
+    expect(await count(`select count(*) from public.ad_audiences au join public.advertiser_accounts a on a.id = au.account_id where a.owner_id = '${ME}'`)).toBe(1);
+    expect(await count(`select count(*) from public.ad_billing_settings where currency in ('INR', 'USD')`)).toBe(2);
+    // The seed delivered real impressions (and a few clicks) through the engine and paid for them.
+    expect(await count(`select count(*) from public.ad_events e join public.advertiser_accounts a on a.id = e.account_id where a.owner_id = '${ME}' and e.event_type = 'impression'`)).toBeGreaterThan(0);
+    expect(await count(`select count(*) from public.ad_events e join public.advertiser_accounts a on a.id = e.account_id where a.owner_id = '${ME}' and e.event_type = 'click'`)).toBeGreaterThan(0);
+    expect(await count(`select balance_minor from public.advertiser_accounts where owner_id = '${ME}'`)).toBeLessThan(5_000_000);
+    expect(await count(`select balance_minor from public.advertiser_accounts where owner_id = '${ME}'`)).toBeGreaterThan(0);
+
+    const served = await asUser(db, "00000027-5eed-4000-8000-000000000027", (tx) =>
+      tx.query<{ headline: string | null }>(`select headline from public.serve_ads_v2('discover', 1)`),
+    );
+    expect(served.rows.map((r) => r.headline)).toContain("Grow your luxury brand (Demo)");
+  });
+
+  it("has conversations with a reaction and an unsent message", async () => {
+    expect(await count(`select count(*) from public.conversation_participants where user_id = '${ME}'`)).toBe(2);
+    expect(await count(`select count(*) from public.messages m join public.conversation_participants cp on cp.conversation_id = m.conversation_id and cp.user_id = '${ME}'`)).toBeGreaterThanOrEqual(5);
+    expect(await count(`select count(*) from public.messages where sender_id = '${ME}' and unsent_at is not null`)).toBe(1);
+    expect(await count(`select count(*) from public.message_reactions where user_id = '${ME}'`)).toBe(1);
+  });
+
+  it("has introductions waiting, forwarded and accepted", async () => {
+    const { rows } = await db.query<{ status: string; n: number }>(
+      `select status::text as status, count(*)::int as n from public.introduction_requests
+       where '${ME}' in (requester_id, introducer_id, target_id) group by 1 order by 1`,
+    );
+    expect(Object.fromEntries(rows.map((r) => [r.status, r.n]))).toEqual({ accepted: 1, forwarded: 1, pending: 2 });
+    // The accepted introduction connected the two members and opened their conversation.
+    expect(await count(`select count(*) from public.introduction_requests where status = 'accepted' and conversation_id is not null`)).toBe(1);
+  });
+
+  it("has vouches both ways and open vouch requests", async () => {
+    expect(await count(`select count(*) from public.vouches where vouchee_id = '${ME}' and withdrawn_at is null`)).toBe(2);
+    expect(await count(`select count(*) from public.vouches where voucher_id = '${ME}'`)).toBe(1);
+    expect(await count(`select count(*) from public.vouch_requests where '${ME}' in (requester_id, voucher_id) and status = 'pending'`)).toBe(2);
+  });
+
+  it("has an NDA deal room with a joined member, an invitee and discussion", async () => {
+    expect(await count(`select count(*) from public.deal_rooms where owner_id = '${ME}' and nda_required`)).toBe(1);
+    expect(await count(`select count(*) from public.deal_room_members m join public.deal_rooms r on r.id = m.room_id where r.owner_id = '${ME}' and m.nda_accepted_at is not null and m.user_id <> '${ME}'`)).toBe(1);
+    expect(await count(`select count(*) from public.deal_room_members m join public.deal_rooms r on r.id = m.room_id where r.owner_id = '${ME}' and m.joined_at is null`)).toBe(1);
+    expect(await count(`select count(*) from public.deal_room_messages m join public.deal_rooms r on r.id = m.room_id where r.owner_id = '${ME}'`)).toBe(2);
+  });
+
+  it("has private contact notes, a reminder due today, and the rest of the showcase", async () => {
+    expect(await count(`select count(*) from public.contact_notes where owner_id = '${ME}'`)).toBe(3);
+    expect(await count(`select count(*) from public.contact_reminders where owner_id = '${ME}' and due_on <= current_date and done_at is null`)).toBe(1);
+    expect(await count(`select count(*) from public.post_poll_votes v join public.posts p on p.id = v.post_id where p.author_id = '${ME}'`)).toBe(7);
+    expect(await count(`select count(*) from public.collection_items i join public.collections c on c.id = i.collection_id where c.owner_id = '${ME}'`)).toBeGreaterThanOrEqual(3);
+    expect(await count(`select count(*) from public.opportunities where author_id = '${ME}'`)).toBe(1);
+    expect(await count(`select count(*) from public.opportunity_interests where user_id = '${ME}'`)).toBe(1);
+    expect(await count(`select count(*) from public.invitations where created_by = '${ME}'`)).toBe(1);
+    expect(await count(`select count(*) from public.community_members where user_id = '${ME}' and status = 'active'`)).toBe(2);
+    expect(await count(`select count(*) from public.event_rsvps where user_id = '${ME}'`)).toBe(2);
+    const { rows } = await db.query<{ type: string }>(`select distinct type::text as type from public.notifications where user_id = '${ME}'`);
+    expect(rows.length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe("demo_features.sql guard", () => {
+  it("refuses to run when the database has a non-seed user", async () => {
+    const fresh = await createMigratedDb();
+    try {
+      await fresh.exec(SEED_STUBS);
+      await fresh.query(`insert into auth.users (id, email) values (gen_random_uuid(), 'real.person@example.com')`);
+      await expect(fresh.exec(readFileSync(path.join(SUPABASE_DIR, "seeds", "demo_features.sql"), "utf8"))).rejects.toThrow(
+        /demo seed refused/,
+      );
+    } finally {
+      await fresh.close();
+    }
+  }, 120_000);
 });

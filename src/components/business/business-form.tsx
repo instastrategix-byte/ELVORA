@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api-client";
 import { titleCase } from "@/lib/format";
 import { useAction, zodFieldErrors } from "@/lib/use-action";
+import { MIN_DESCRIPTION_CHARS } from "@backend/modules/listings/readiness";
 import { BUSINESS_CATEGORIES, businessSchema } from "@backend/modules/listings/schemas";
 import type { BusinessDetail } from "@backend/modules/listings/types";
 
@@ -65,26 +66,42 @@ export function BusinessForm({ business }: { business: BusinessDetail | null }) 
             </Select>
           )}
         </Field>
-        <Field id="b-desc" label="Description" error={fe.description} className="sm:col-span-2">
+        <Field
+          id="b-desc"
+          label="Description"
+          required
+          error={fe.description}
+          hint={`At least ${MIN_DESCRIPTION_CHARS} characters: what you offer and who you serve.`}
+          className="sm:col-span-2"
+        >
           {(a) => <Textarea name="description" defaultValue={business?.description ?? ""} maxLength={3000} {...a} />}
         </Field>
-        <Field id="b-loc" label="Location" error={fe.location}>
+        <Field id="b-loc" label="Location" required error={fe.location} hint="City and country.">
           {(a) => <Input name="location" defaultValue={business?.location ?? ""} maxLength={120} {...a} />}
         </Field>
         <Field id="b-web" label="Website" error={fe.website} hint="https:// only">
           {(a) => <Input name="website" type="url" defaultValue={business?.website ?? ""} {...a} />}
         </Field>
-        <Field id="b-email" label="Inquiry contact email" error={fe.contactEmail} hint="Notified when members send inquiries.">
+        <Field id="b-email" label="Inquiry contact email" required error={fe.contactEmail} hint="Notified when members send inquiries.">
           {(a) => <Input name="contactEmail" type="email" defaultValue={business?.contactEmail ?? ""} {...a} />}
         </Field>
-        <Field id="b-reg" label="Company registration number" error={fe.registrationNumber} hint="Used only for verification.">
+        <Field
+          id="b-reg"
+          label="Company registration number"
+          required
+          error={fe.registrationNumber}
+          hint="CIN, GSTIN or company number. Seen only by you and reviewers."
+        >
           {(a) => <Input name="registrationNumber" defaultValue={business?.registrationNumber ?? ""} maxLength={80} {...a} />}
         </Field>
         <div className="sm:col-span-2">
           <ImageUpload purpose="business_logo" label="Logo" currentUrl={business?.logoUrl ?? null} onChange={setLogoPath} />
         </div>
         <div className="space-y-2 sm:col-span-2">
-          <p className="text-sm font-medium">Verification documents</p>
+          <p className="text-sm font-medium">
+            Verification documents <span className="text-danger" aria-hidden="true">*</span>
+            <span className="sr-only"> (required)</span>
+          </p>
           <p className="text-sm text-muted">
             A certificate of incorporation or trade licence, and proof that you are authorised to represent the business. Stored privately for
             reviewers only. {business?.evidencePaths.length ? `${business.evidencePaths.length} document(s) on file — new uploads replace them.` : ""}
@@ -92,6 +109,9 @@ export function BusinessForm({ business }: { business: BusinessDetail | null }) 
           <DocumentUpload onChange={(p, busy) => (setEvidence(p.length ? p : null), setUploading(busy))} />
         </div>
       </fieldset>
+      <p className="text-xs text-muted">
+        <span className="text-danger">*</span> Required before you can submit for verification. You can save a draft at any time.
+      </p>
       <Button type="submit" disabled={locked || action.pending || uploading}>
         {action.pending ? "Saving…" : business ? "Save changes" : "Create business profile"}
       </Button>
